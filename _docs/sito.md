@@ -8,6 +8,8 @@ Il sito è statico. `src/generator/` lo genera dai file YAML. Non c'è un server
 2. Esegui `npm run site:public` per il profilo pubblico.
 3. Pubblica solo l'output del profilo pubblico, e solo se il build finisce con `SUCCESS`.
 
+Per depositare i dati come dataset aperto usa `ancestors export -o <cartella>`: scrive il dataset del profilo pubblico in JSON, con lo stesso controllo anti-fuga.
+
 I due comandi chiamano `ancestors build --profile private|public`. Le opzioni sono `--data-dir`, `--config`, `--out` (vedi `ancestors --help`).
 
 ## Profili

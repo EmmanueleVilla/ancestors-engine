@@ -30,6 +30,8 @@ Dopo il build pubblico, `src/privacy/leak-check.ts` cerca in tutti i file genera
 2. Correggi la fuga nei dati: riscrivi il testo ("testimonianza di un familiare"). Non disattivare il controllo.
 3. Il controllo non conosce le persone che non sono nell'archivio. Non scrivere nel testo libero nomi di terzi vivi (parroci, impiegati, parenti non inseriti).
 
+Lo stesso controllo vale per `ancestors export`, che scrive il dataset pubblico in JSON.
+
 ## Testo libero
 
 Il filtro toglie i campi delle persone vive, ma non può capire il testo libero degli altri record. Una nota su un defunto può nominare un nipote vivo.

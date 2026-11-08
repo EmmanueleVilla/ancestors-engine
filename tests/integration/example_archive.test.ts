@@ -46,3 +46,23 @@ describe('Example archive', () => {
     expect(fs.existsSync(path.join(outDir, 'next-steps.html'))).toBe(true);
   });
 });
+
+describe('Public export', () => {
+  const outDir = path.resolve('tests/fixtures/test-export-example');
+  afterEach(() => fs.rmSync(outDir, { recursive: true, force: true }));
+
+  it('exports the public dataset as JSON without living people names or IDs', async () => {
+    const { runExportCommand } = await import('../../src/cli/export.js');
+    const exitCode = runExportCommand({
+      dataDir: path.resolve('example/data'),
+      configPath: path.resolve('example/archivio.config.yml'),
+      outDir,
+      silent: true,
+    });
+    expect(exitCode).toBe(0);
+    const people = JSON.parse(fs.readFileSync(path.join(outDir, 'people.json'), 'utf-8')) as { id: string; surname: string }[];
+    expect(people.length).toBe(10);
+    expect(people.some((p) => p.id === 'P001_rossi_luca')).toBe(false);
+    expect(people.filter((p) => p.surname === '[Living]').length).toBe(4);
+  });
+});

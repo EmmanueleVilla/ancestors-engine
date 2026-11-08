@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runValidateCommand } from './validate.js';
 import { runBuildCommand } from './build.js';
+import { runExportCommand } from './export.js';
 import { BuildProfile } from '../config/index.js';
 
 function parseArgs(args: string[]) {
@@ -67,6 +68,7 @@ Usage:
 Commands:
   validate               Validate schemas, referential integrity, and graph acyclicity
   build                  Generate static multi-page website and search index
+  export                 Export the public-profile dataset as JSON (living people masked)
 
 Options:
   -d, --data-dir <path>   Path to YAML data directory (default: ./data)
@@ -117,6 +119,14 @@ export function main(argv: string[] = process.argv.slice(2)): number {
         profile: opts.profile,
         strict: opts.strict,
         verbose: opts.verbose,
+        silent: opts.silent,
+      });
+
+    case 'export':
+      return runExportCommand({
+        dataDir: opts.dataDir,
+        outDir: opts.outDir,
+        configPath: opts.configPath,
         silent: opts.silent,
       });
 

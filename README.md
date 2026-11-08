@@ -9,6 +9,8 @@ Engine per archivi genealogici scritti in file YAML, pensato per lavorare con un
 - **validatore** (riferimenti, cicli, date impossibili, fonti mancanti);
 - **sito statico** con un profilo privato e un profilo pubblico che maschera le persone vive, sostituisce i loro ID con pseudonimi e si ferma se trova una fuga di dati.
 
+Con `ancestors export` il dataset del profilo pubblico si esporta in JSON, per depositarlo come dato aperto.
+
 I dati di un archivio reale stanno in un repository **privato** separato, che usa l'engine come dipendenza.
 
 ## Provare l'esempio
