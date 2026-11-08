@@ -19,6 +19,8 @@ export const ArchiveConfigSchema = z.strictObject({
       footer: z.string().optional(),
       home_title: z.string().optional(),
       home_intro: z.string().optional(),
+      // Licenza del dataset scaricabile dal sito pubblico (pagina dati.html), es. "CC BY 4.0".
+      dataset_license: z.string().optional(),
       // Colori delle serie 1…8 (sostituiscono quelli predefiniti del CSS).
       series_colors: z.array(z.strictObject({ color: ColorSchema, on_color: ColorSchema.optional() })).max(8).default([]),
     })

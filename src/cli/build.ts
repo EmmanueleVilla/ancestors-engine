@@ -108,6 +108,8 @@ export function runBuildCommand(options: BuildCliOptions): number {
       nextStepsMarkdown: fs.existsSync(nextStepsPath) ? fs.readFileSync(nextStepsPath, 'utf-8') : undefined,
       treeLayout,
       archiveRoot,
+      // Nel profilo pubblico il dataset filtrato si scarica da dati.html (il controllo anti-fuga lo copre).
+      openData: isPublic,
       site: {
         ...(s.title ? { title: s.title } : {}),
         ...(s.subtitle ? { subtitle: s.subtitle } : {}),
@@ -115,6 +117,7 @@ export function runBuildCommand(options: BuildCliOptions): number {
         ...(s.footer ? { footer: s.footer } : {}),
         ...(s.home_title ? { homeTitle: s.home_title } : {}),
         ...(s.home_intro ? { homeIntro: s.home_intro } : {}),
+        ...(s.dataset_license ? { datasetLicense: s.dataset_license } : {}),
         rootPersonId: treeLayout.rootId,
         seriesColors: s.series_colors.map((c) => ({ color: c.color, onColor: c.on_color })),
       },

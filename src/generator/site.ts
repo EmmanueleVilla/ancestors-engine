@@ -13,6 +13,8 @@ export interface SiteSettings {
   homeTitle: string;
   /** Paragrafo introduttivo della home (testo semplice). */
   homeIntro: string;
+  /** Licenza del dataset scaricabile (solo profilo pubblico). */
+  datasetLicense?: string;
   /** Persona radice dell'albero principale (ID già pseudonimizzato nel profilo pubblico). */
   rootPersonId?: string;
   /** Colori delle serie 1…8 (sostituiscono quelli predefiniti del CSS). */

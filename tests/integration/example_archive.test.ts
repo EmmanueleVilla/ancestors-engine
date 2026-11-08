@@ -31,6 +31,12 @@ describe('Example archive', () => {
     expect(people.filter((f) => f.startsWith('L-')).length).toBe(4);
     expect(fs.readFileSync(path.join(outDir, 'index.html'), 'utf-8')).toContain('Archivio della famiglia Rossi');
     expect(fs.existsSync(path.join(outDir, 'next-steps.html'))).toBe(false);
+    // Dataset scaricabile, con lo stesso filtro delle pagine
+    expect(fs.readFileSync(path.join(outDir, 'index.html'), 'utf-8')).toContain('href="./dati.html"');
+    expect(fs.existsSync(path.join(outDir, 'dati.html'))).toBe(true);
+    const data = JSON.parse(fs.readFileSync(path.join(outDir, 'dati', 'people.json'), 'utf-8')) as { id: string; surname: string }[];
+    expect(data.some((p) => p.id === 'P001_rossi_luca')).toBe(false);
+    expect(data.filter((p) => p.surname === '[Living]').length).toBe(4);
   });
 
   it('builds a private site with everyone and the next steps page', () => {
@@ -44,6 +50,8 @@ describe('Example archive', () => {
     expect(exitCode).toBe(0);
     expect(fs.existsSync(path.join(outDir, 'people', 'P001_rossi_luca.html'))).toBe(true);
     expect(fs.existsSync(path.join(outDir, 'next-steps.html'))).toBe(true);
+    expect(fs.existsSync(path.join(outDir, 'dati.html'))).toBe(false);
+    expect(fs.existsSync(path.join(outDir, 'dati'))).toBe(false);
   });
 });
 

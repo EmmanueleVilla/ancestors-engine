@@ -16,10 +16,16 @@ export interface LayoutOptions {
 }
 
 let showNextSteps = false;
+let showOpenData = false;
 
 /** Enables the "Prossimi passi" nav entry (only when the page is generated). */
 export function setNextStepsNav(enabled: boolean): void {
   showNextSteps = enabled;
+}
+
+/** Enables the "Scarica i dati" footer link (only when dati.html is generated). */
+export function setOpenDataLink(enabled: boolean): void {
+  showOpenData = enabled;
 }
 
 export function renderLayout(options: LayoutOptions): string {
@@ -68,7 +74,8 @@ export function renderLayout(options: LayoutOptions): string {
     </div>
   </main>
   <footer class="piede">
-    <p>${escapeHtml(site.footer)}</p>
+    <p>${escapeHtml(site.footer)}</p>${showOpenData ? `
+    <p><a href="${root}dati.html">Scarica i dati (JSON)</a></p>` : ''}
   </footer>
   `;
 

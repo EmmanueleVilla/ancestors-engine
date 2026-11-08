@@ -16,7 +16,9 @@ import { renderTimelinePage } from './pages/timeline.js';
 import { renderSearchPage } from './pages/search.js';
 import { compileSearchIndex } from './search/index.js';
 import { renderNextStepsPage } from './pages/next_steps.js';
-import { setNextStepsNav } from './components/layout.js';
+import { setNextStepsNav, setOpenDataLink } from './components/layout.js';
+import { renderOpenDataPage } from './pages/open_data.js';
+import { writeDatasetExport } from '../export/dataset.js';
 
 export interface GenerateOptions {
   outDir: string;
@@ -30,6 +32,8 @@ export interface GenerateOptions {
   archiveRoot?: string;
   /** Titoli, testi, radice e colori dell'archivio. */
   site?: Partial<SiteSettings>;
+  /** Scrive il dataset (già filtrato) in dati/ e la pagina dati.html. Solo per il profilo pubblico. */
+  openData?: boolean;
 }
 
 export function generateStaticSite(dataset: NormalizedDataset, options: GenerateOptions): void {
@@ -69,6 +73,19 @@ export function generateStaticSite(dataset: NormalizedDataset, options: Generate
     fs.writeFileSync(nextStepsFile, renderNextStepsPage(nextStepsMarkdown, './'), 'utf-8');
   } else {
     fs.rmSync(nextStepsFile, { force: true });
+  }
+
+  // Dataset scaricabile: dati/*.json e dati.html, oppure nessuno dei due (niente file di un build precedente).
+  const openData = !!options.openData && options.profile !== 'private';
+  setOpenDataLink(openData);
+  const openDataDir = path.join(outDir, 'dati');
+  const openDataFile = path.join(outDir, 'dati.html');
+  if (openData) {
+    const counts = writeDatasetExport(dataset, openDataDir);
+    fs.writeFileSync(openDataFile, renderOpenDataPage(counts, './'), 'utf-8');
+  } else {
+    fs.rmSync(openDataDir, { recursive: true, force: true });
+    fs.rmSync(openDataFile, { force: true });
   }
 
   // 2. Render Home Page

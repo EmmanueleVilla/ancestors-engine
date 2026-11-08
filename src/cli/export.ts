@@ -1,9 +1,9 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { loadAndValidateDataset, NormalizedDataset } from '../validator/index.js';
 import { applyPublicProfile } from '../privacy/filter.js';
 import { findLeaks } from '../privacy/leak-check.js';
 import { loadArchiveConfig } from '../config/archive.js';
+import { writeDatasetExport } from '../export/dataset.js';
 
 export interface ExportCliOptions {
   dataDir?: string;
@@ -38,29 +38,7 @@ export function runExportCommand(options: ExportCliOptions): number {
     pseudonymKey: config.privacy.pseudonym_key,
   });
 
-  fs.rmSync(outDir, { recursive: true, force: true });
-  fs.mkdirSync(outDir, { recursive: true });
-  const collections: Record<string, unknown[]> = {
-    people: [...dataset.people.values()],
-    families: [...dataset.families.values()],
-    events: [...dataset.events.values()],
-    places: [...dataset.places.values()],
-    sources: [...dataset.sources.values()],
-    citations: [...dataset.citations.values()],
-    media: [...dataset.media.values()],
-    research: dataset.research ?? [],
-  };
-  for (const [name, records] of Object.entries(collections)) {
-    fs.writeFileSync(path.join(outDir, `${name}.json`), JSON.stringify(records, null, 2) + '\n', 'utf-8');
-  }
-  const counts = Object.fromEntries(Object.entries(collections).map(([k, v]) => [k, v.length]));
-  fs.writeFileSync(
-    path.join(outDir, 'README.md'),
-    `# Export pubblico\n\nGenerato da ancestors-engine (\`ancestors export\`). Persone vive mascherate come "[Living]", ID pseudonimi, niente media dei vivi.\n\n` +
-      Object.entries(counts).map(([k, v]) => `- ${k}: ${v}`).join('\n') +
-      '\n',
-    'utf-8'
-  );
+  const counts = writeDatasetExport(dataset, outDir);
 
   const leaks = findLeaks(outDir, validation.dataset as NormalizedDataset, maskedIds);
   if (leaks.length > 0) {

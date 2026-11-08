@@ -12,6 +12,7 @@ Ogni archivio ha un file `archivio.config.yml` nella sua radice. L'engine lo leg
 | `site.description` | Descrizione delle pagine per i motori di ricerca |
 | `site.footer` | Testo a piè di pagina |
 | `site.home_title`, `site.home_intro` | Titolo e paragrafo della home |
+| `site.dataset_license` | Licenza del dataset scaricabile dal sito pubblico (`dati.html`), per esempio `CC BY 4.0`. Facoltativa |
 | `site.series_colors` | Colori delle serie 1-8 (`color`, `on_color`), facoltativi |
 | `next_steps_file` | File dei prossimi passi, solo nel sito privato |
 | `privacy.named_living_ids` | Persone vive che nel sito pubblico tengono nome e ID |
