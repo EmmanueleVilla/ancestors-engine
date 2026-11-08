@@ -1,0 +1,9 @@
+id: EVT003
+event_type: birth
+person_ids:
+  - P003_rossi_giorgio
+date:
+  precision: exact
+  year: 1958
+  month: 5
+  day: 20

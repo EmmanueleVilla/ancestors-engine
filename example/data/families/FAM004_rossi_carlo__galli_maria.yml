@@ -1,0 +1,15 @@
+id: FAM004_rossi_carlo__galli_maria
+partner_ids:
+  - P007_rossi_carlo
+  - P008_galli_maria
+relationship_type: marriage
+children_ids:
+  - P005_rossi_pietro
+child_confidence:
+  P005_rossi_pietro:
+    P007_rossi_carlo: probable
+child_citation_ids:
+  P005_rossi_pietro:
+    - CIT003
+notes:
+  - "Carlo e Maria come genitori di Pietro: dall'atto di matrimonio di Pietro (1950). Che questo Carlo sia il Carlo del foglio matricolare (nato a Borgonuovo nel 1893) è probabile ma non provato: TBC con il loro atto di matrimonio, non ancora trovato."

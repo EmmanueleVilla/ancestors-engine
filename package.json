@@ -1,0 +1,49 @@
+{
+  "name": "ancestors-engine",
+  "version": "1.0.0",
+  "description": "Engine per archivi genealogici in YAML: validatore, paradati, registro delle ricerche e generatore di siti statici con profilo pubblico protetto",
+  "license": "MIT",
+  "author": "Emmanuele Villa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EmmanueleVilla/ancestors-engine.git"
+  },
+  "type": "module",
+  "bin": {
+    "ancestors": "./dist/cli/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "_docs",
+    "templates",
+    "scripts",
+    "example",
+    ".agents"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc && node -e \"const fs=require('fs'); fs.mkdirSync('dist/generator/assets', {recursive: true}); fs.cpSync('src/generator/assets', 'dist/generator/assets', {recursive: true});\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p .",
+    "example:check": "tsx src/cli/index.ts validate --strict -d example/data",
+    "example:site": "npm run build && cd example && node ../dist/cli/index.js build --profile private -o ../dist-example",
+    "example:site:public": "npm run build && cd example && node ../dist/cli/index.js build --profile public -o ../dist-example-public",
+    "prepare": "npm run build && (git config core.hooksPath .githooks 2>/dev/null || true)"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.6"
+  }
+}

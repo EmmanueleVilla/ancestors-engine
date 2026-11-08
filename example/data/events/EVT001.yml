@@ -1,0 +1,9 @@
+id: EVT001
+event_type: birth
+person_ids:
+  - P001_rossi_luca
+date:
+  precision: exact
+  year: 1990
+  month: 3
+  day: 12

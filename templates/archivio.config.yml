@@ -1,0 +1,16 @@
+# Configurazione dell'archivio. Tienila solo nel repository privato.
+site:
+  title: Archivio <Cognome>
+  subtitle: Fondo di famiglia
+  description: Archivio genealogico della famiglia <Cognome>
+  footer: Archivio di famiglia · ogni dato rimanda alla sua fonte
+  home_title: Archivio della famiglia <Cognome>
+  home_intro: Ogni persona è un fascicolo, ogni dato rimanda all'atto che lo prova.
+next_steps_file: NEXT_STEPS.md
+privacy:
+  named_living_ids: []
+  # Sostituisci con una stringa lunga e casuale, e non cambiarla più.
+  pseudonym_key: "CAMBIAMI"
+tree:
+  root_id: P001_cognome_nome
+  positions: {}

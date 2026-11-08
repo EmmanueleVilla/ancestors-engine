@@ -1,0 +1,48 @@
+/* Print styles */
+@media print {
+  body {
+    background: #ffffff;
+    color: #000000;
+    font-size: 11pt;
+  }
+
+  .site-header,
+  .site-nav,
+  .search-input,
+  .site-footer,
+  .no-print {
+    display: none !important;
+  }
+
+  .main-content {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .card {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin-bottom: 1.5rem;
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: #000000;
+    text-decoration: underline;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 80%;
+  }
+
+  .timeline-list::before {
+    display: none;
+  }
+
+  .timeline-item::before {
+    display: none;
+  }
+}

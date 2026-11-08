@@ -1,0 +1,12 @@
+id: EVT008
+event_type: death
+person_ids:
+  - P006_ferrari_teresa
+date:
+  precision: exact
+  year: 2010
+  month: 1
+  day: 17
+place_id: PLC001
+source_citation_ids:
+  - CIT002

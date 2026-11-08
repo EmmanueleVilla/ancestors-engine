@@ -1,0 +1,13 @@
+id: EVT009
+event_type: birth
+person_ids:
+  - P007_rossi_carlo
+date:
+  precision: exact
+  year: 1893
+  month: 11
+  day: 28
+place_id: PLC001
+source_citation_ids:
+  - CIT004
+  - CIT005

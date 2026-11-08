@@ -1,0 +1,14 @@
+{
+  "name": "archivio-di-famiglia",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "ancestors validate --strict",
+    "site": "ancestors build --profile private",
+    "site:public": "ancestors build --profile public",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
+  },
+  "dependencies": {
+    "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+id: EVT005
+event_type: birth
+person_ids:
+  - P005_rossi_pietro
+date:
+  precision: exact
+  year: 1925
+  month: 2
+  day: 14
+place_id: PLC001
+source_citation_ids:
+  - CIT001
+  - CIT003

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Prima di ogni commit che tocca il codice: controllo dei tipi e test.
+# Per saltarlo in emergenza: git commit --no-verify
+if git diff --cached --name-only | grep -qE '^(src|tests|example)/'; then
+  npx --no-install tsc --noEmit -p . && npx --no-install vitest run || {
+    echo "\n[pre-commit] Commit bloccato: correggi gli errori sopra (o usa --no-verify)."
+    exit 1
+  }
+fi

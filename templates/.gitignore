@@ -1,0 +1,4 @@
+node_modules/
+dist/
+scansioni_da_leggere/
+.DS_Store

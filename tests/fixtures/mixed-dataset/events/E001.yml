@@ -1,0 +1,9 @@
+id: E001
+event_type: birth
+person_ids:
+  - L001
+date:
+  precision: exact
+  year: 2005
+  month: 6
+  day: 1

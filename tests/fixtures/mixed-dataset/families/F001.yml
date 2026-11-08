@@ -1,0 +1,5 @@
+id: F001
+partner_ids:
+  - D001
+children_ids:
+  - L001

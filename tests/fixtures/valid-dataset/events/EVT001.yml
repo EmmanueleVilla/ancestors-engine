@@ -1,0 +1,13 @@
+id: EVT001
+event_type: birth
+person_ids:
+  - P003
+place_id: PLC001
+date:
+  precision: exact
+  year: 1875
+  month: 4
+  day: 15
+description: Born at home on High Street
+source_citation_ids:
+  - CIT001

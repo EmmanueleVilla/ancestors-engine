@@ -1,0 +1,7 @@
+id: FAM002_rossi_giorgio__conti_elena
+partner_ids:
+  - P003_rossi_giorgio
+  - P004_conti_elena
+relationship_type: marriage
+children_ids:
+  - P001_rossi_luca

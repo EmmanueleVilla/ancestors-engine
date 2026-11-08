@@ -1,0 +1,10 @@
+id: CIT001
+source_id: SRC004
+claim_type: birth_and_death
+person_id: P005_rossi_pietro
+event_id: EVT006
+evidence_type: secondary
+confidence: certain
+transcribed_by: user
+verified_on_original: true
+quoted_text: "ROSSI PIETRO 14 2 1925 30 9 2001"

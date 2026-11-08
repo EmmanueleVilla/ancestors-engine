@@ -1,0 +1,7 @@
+id: FAM005_rossi_angelo__marelli_rosa
+partner_ids:
+  - P009_rossi_angelo
+  - P010_marelli_rosa
+relationship_type: marriage
+children_ids:
+  - P007_rossi_carlo

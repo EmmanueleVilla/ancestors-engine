@@ -1,0 +1,12 @@
+id: EVT007
+event_type: birth
+person_ids:
+  - P006_ferrari_teresa
+date:
+  precision: exact
+  year: 1928
+  month: 6
+  day: 8
+place_id: PLC002
+source_citation_ids:
+  - CIT002

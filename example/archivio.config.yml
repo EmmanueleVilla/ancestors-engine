@@ -1,0 +1,16 @@
+# Configurazione dell'archivio di esempio (famiglia inventata).
+site:
+  title: Archivio Rossi
+  subtitle: Archivio di esempio
+  description: Archivio genealogico di esempio, famiglia inventata
+  footer: Archivio di esempio · ogni dato rimanda alla sua fonte
+  home_title: Archivio della famiglia Rossi
+  home_intro: "Famiglia e luoghi inventati, per provare l'engine. Ogni persona è un fascicolo, ogni dato rimanda all'atto che lo prova."
+next_steps_file: NEXT_STEPS.md
+privacy:
+  named_living_ids: []
+  pseudonym_key: "chiave-di-esempio"
+tree:
+  root_id: P001_rossi_luca
+  mirror_root_id: P002_bianchi_anna
+  positions: {}

@@ -1,0 +1,14 @@
+id: EVT010
+event_type: marriage
+person_ids:
+  - P005_rossi_pietro
+  - P006_ferrari_teresa
+family_id: FAM003_rossi_pietro__ferrari_teresa
+date:
+  precision: exact
+  year: 1950
+  month: 4
+  day: 22
+place_id: PLC001
+source_citation_ids:
+  - CIT003

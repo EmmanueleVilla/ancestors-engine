@@ -1,0 +1,9 @@
+id: EVT004
+event_type: birth
+person_ids:
+  - P004_conti_elena
+date:
+  precision: exact
+  year: 1960
+  month: 10
+  day: 1

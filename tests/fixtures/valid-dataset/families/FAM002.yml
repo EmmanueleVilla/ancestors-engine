@@ -1,0 +1,6 @@
+id: FAM002
+partner_ids:
+  - P003
+relationship_type: partnership
+children_ids:
+  - P004

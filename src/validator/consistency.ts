@@ -1,0 +1,346 @@
+import type { DateValue } from '../model/date.js';
+import type { DatasetIndex, ValidationError } from './reference.js';
+
+/**
+ * Controlli di coerenza "morbidi": non bloccano la build (salvo `--strict`),
+ * perché in genealogia esistono casi strani ma veri. Segnalano però gli errori
+ * tipici di trascrizione: date impossibili, età dei genitori, eventi collegati
+ * alla persona sbagliata, record che nessuno richiama.
+ */
+
+/** Intervallo [min, max] in anni frazionari entro cui cade la data. */
+interface Bounds {
+  min: number;
+  max: number;
+}
+
+const TOLERANCE: Partial<Record<DateValue['precision'], number>> = {
+  approximate: 3,
+  estimated: 5,
+  uncertain: 5,
+};
+
+function point(y: number, m?: number, d?: number): number {
+  return y + ((m ?? 1) - 1) / 12 + ((d ?? 1) - 1) / 365;
+}
+
+function periodEnd(y: number, m?: number, d?: number): number {
+  if (d !== undefined && m !== undefined) return point(y, m, d) + 1 / 365;
+  if (m !== undefined) return point(y, m) + 1 / 12;
+  return y + 1;
+}
+
+export function dateBounds(date?: DateValue | null): Bounds | null {
+  if (!date || date.year === undefined) return null;
+  const start = point(date.year, date.month, date.day);
+  const end = periodEnd(date.year, date.month, date.day);
+  switch (date.precision) {
+    case 'before':
+      return { min: -Infinity, max: end };
+    case 'after':
+      return { min: start, max: Infinity };
+    case 'range': {
+      if (date.end_year === undefined) return { min: start, max: Infinity };
+      return { min: start, max: periodEnd(date.end_year, date.end_month, date.end_day) };
+    }
+    default: {
+      const tol = TOLERANCE[date.precision] ?? 0;
+      return { min: start - tol, max: end + tol };
+    }
+  }
+}
+
+/** Vero solo se `a` è sicuramente successiva a `b` di più di `gap` anni. */
+function surelyAfter(a: Bounds | null, b: Bounds | null, gap = 0): boolean {
+  return !!a && !!b && a.min - b.max > gap;
+}
+
+const PARENT_MIN_AGE = 13;
+const MOTHER_MAX_AGE = 55;
+const FATHER_MAX_AGE = 75;
+const MAX_LIFESPAN = 110;
+/** Un figlio può nascere fino a ~10 mesi dopo la morte del padre. */
+const POSTHUMOUS_GAP = 0.85;
+
+const EXPECTED_EVENT_TYPES: Record<string, string[]> = {
+  birth_event_id: ['birth', 'baptism', 'christening'],
+  death_event_id: ['death'],
+  burial_event_id: ['burial'],
+  start_event_id: ['marriage', 'civil_union', 'partnership'],
+};
+
+/** Riferimenti dal registro ricerche: contano come "usati" anche se nessuna scheda li richiama. */
+export interface ExtraReferences {
+  media?: Iterable<string>;
+  records?: Iterable<string>;
+}
+
+/** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
+const DETACHED_TAG = 'scollegato';
+
+/**
+ * Tag che dichiara la fonte di una persona: la conoscenza diretta del ricercatore o della famiglia
+ * (di solito le generazioni viventi). Sostituisce la citazione nel controllo "senza fonti".
+ */
+export const DIRECT_KNOWLEDGE_TAG = 'conoscenza_diretta';
+
+export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {}): ValidationError[] {
+  const warnings: ValidationError[] = [];
+  const warn = (filePath: string, field: string, message: string, nonBlocking = false) =>
+    warnings.push({ filePath, field, message, ...(nonBlocking ? { nonBlocking: true } : {}) });
+
+  const eventDate = (id?: string): Bounds | null =>
+    id ? dateBounds(index.events.get(id)?.data?.date) : null;
+  const birthOf = (pid: string) => eventDate(index.people.get(pid)?.data?.birth_event_id);
+  const deathOf = (pid: string) => eventDate(index.people.get(pid)?.data?.death_event_id);
+  const nameOf = (pid: string) => {
+    const p = index.people.get(pid)?.data;
+    return p ? `${p.given_names ?? ''} ${p.surname ?? ''}`.trim() || pid : pid;
+  };
+
+  const checkEventType = (file: string, field: string, eventId?: string) => {
+    if (!eventId) return;
+    const evt = index.events.get(eventId)?.data;
+    const expected = EXPECTED_EVENT_TYPES[field];
+    if (evt && expected && !expected.includes(evt.event_type)) {
+      warn(file, field, `L'evento '${eventId}' è di tipo '${evt.event_type}', atteso ${expected.join('/')}.`);
+    }
+  };
+
+  // ---- Persone ----
+  for (const [pid, { data: p, filePath }] of index.people) {
+    for (const field of ['birth_event_id', 'death_event_id', 'burial_event_id'] as const) {
+      const eventId = p[field];
+      if (!eventId) continue;
+      checkEventType(filePath, field, eventId);
+      const evt = index.events.get(eventId)?.data;
+      if (evt && evt.person_ids?.length && !evt.person_ids.includes(pid)) {
+        warn(filePath, field, `L'evento '${eventId}' non elenca questa persona nei suoi person_ids.`);
+      }
+    }
+
+    const birth = eventDate(p.birth_event_id);
+    const death = eventDate(p.death_event_id);
+    const burial = eventDate(p.burial_event_id);
+    if (surelyAfter(birth, death)) warn(filePath, 'death_event_id', `Morte precedente alla nascita.`);
+    if (surelyAfter(death, burial)) warn(filePath, 'burial_event_id', `Sepoltura precedente alla morte.`);
+    if (birth && death && death.min - birth.max > MAX_LIFESPAN) {
+      warn(filePath, 'death_event_id', `Vita di oltre ${MAX_LIFESPAN} anni: controllare le date.`);
+    }
+  }
+
+  // Eventi di nascita/morte a persona singola che la persona non richiama.
+  const linkField: Record<string, string> = { birth: 'birth_event_id', death: 'death_event_id', burial: 'burial_event_id' };
+  for (const [eid, { data: evt, filePath }] of index.events) {
+    const field = linkField[evt.event_type];
+    if (!field || evt.person_ids?.length !== 1) continue;
+    const person = index.people.get(evt.person_ids[0])?.data;
+    if (person && person[field] !== eid) {
+      warn(
+        filePath,
+        'person_ids',
+        `Evento di tipo '${evt.event_type}' di ${nameOf(evt.person_ids[0])}, ma la persona ha ${field}: ${person[field] ?? '(vuoto)'}.`
+      );
+    }
+  }
+
+  // ---- Famiglie ----
+  for (const [, { data: fam, filePath }] of index.families) {
+    const partners: string[] = fam.partner_ids ?? [];
+    checkEventType(filePath, 'start_event_id', fam.start_event_id);
+
+    if (partners.length === 2) {
+      const [a, b] = partners.map((id) => index.people.get(id)?.data?.sex);
+      if (a && a === b && (a === 'male' || a === 'female')) {
+        warn(filePath, 'partner_ids', `Entrambi i partner hanno sex: ${a}.`);
+      }
+    }
+
+    const union = eventDate(fam.start_event_id);
+    for (const partner of partners) {
+      if (union && surelyAfter(birthOf(partner), union, -PARENT_MIN_AGE)) {
+        warn(filePath, 'start_event_id', `${nameOf(partner)} si sposa prima dei ${PARENT_MIN_AGE} anni (o prima di nascere).`);
+      }
+      if (surelyAfter(union, deathOf(partner))) {
+        warn(filePath, 'start_event_id', `Matrimonio successivo alla morte di ${nameOf(partner)}.`);
+      }
+    }
+
+    for (const child of fam.children_ids ?? []) {
+      const childBirth = birthOf(child);
+      if (!childBirth) continue;
+      for (const parent of partners) {
+        const sex = index.people.get(parent)?.data?.sex;
+        const parentBirth = birthOf(parent);
+        const parentDeath = deathOf(parent);
+        const who = `${nameOf(parent)} → ${nameOf(child)}`;
+        if (parentBirth && childBirth.max - parentBirth.min < PARENT_MIN_AGE) {
+          warn(filePath, 'children_ids', `${who}: genitore con meno di ${PARENT_MIN_AGE} anni alla nascita del figlio.`);
+        }
+        const maxAge = sex === 'female' ? MOTHER_MAX_AGE : FATHER_MAX_AGE;
+        if (parentBirth && childBirth.min - parentBirth.max > maxAge) {
+          warn(filePath, 'children_ids', `${who}: genitore con più di ${maxAge} anni alla nascita del figlio.`);
+        }
+        const gap = sex === 'female' ? 0 : POSTHUMOUS_GAP;
+        if (surelyAfter(childBirth, parentDeath, gap)) {
+          warn(filePath, 'children_ids', `${who}: figlio nato dopo la morte del genitore.`);
+        }
+      }
+    }
+  }
+
+  // ---- Record che nessuno richiama ----
+  const inFamily = new Set<string>();
+  for (const { data: fam } of index.families.values()) {
+    for (const id of [...(fam.partner_ids ?? []), ...(fam.children_ids ?? [])]) inFamily.add(id);
+  }
+  const referencedEvents = new Set<string>();
+  const referencedCitations = new Set<string>();
+  const referencedMedia = new Set<string>();
+  const citedSources = new Set<string>();
+  for (const id of extra.media ?? []) referencedMedia.add(id);
+  for (const id of extra.records ?? []) {
+    referencedEvents.add(id);
+    citedSources.add(id);
+  }
+  const collect = (d: any) => {
+    for (const f of ['birth_event_id', 'death_event_id', 'burial_event_id', 'start_event_id', 'end_event_id']) {
+      if (d[f]) referencedEvents.add(d[f]);
+    }
+    for (const id of d.source_citation_ids ?? []) referencedCitations.add(id);
+    for (const id of d.media_ids ?? []) referencedMedia.add(id);
+    for (const ids of Object.values(d.child_citation_ids ?? {}) as string[][]) {
+      for (const id of ids) referencedCitations.add(id);
+    }
+  };
+  for (const cat of ['people', 'families', 'events', 'relationships'] as const) {
+    for (const { data } of index[cat].values()) collect(data);
+  }
+  for (const { data: cit } of index.citations.values()) {
+    citedSources.add(cit.source_id);
+    if (cit.event_id) referencedEvents.add(cit.event_id);
+  }
+  for (const { data: med } of index.media.values()) {
+    if (med.source_id) citedSources.add(med.source_id);
+    for (const id of med.event_ids ?? []) referencedEvents.add(id);
+  }
+
+  for (const [pid, { data: p, filePath }] of index.people) {
+    if (!inFamily.has(pid) && !p.tags?.includes(DETACHED_TAG)) warn(filePath, 'id', `Persona non collegata a nessuna famiglia.`);
+  }
+
+  // Ogni persona, famiglia, evento e relazione ha una fonte: una citazione, oppure il tag conoscenza_diretta.
+  // Il controllo vale solo se il dataset usa le citazioni (un dataset di prova senza citazioni non lo attiva).
+  if (index.citations.size > 0) {
+    const citedPeople = new Set<string>();
+    const citedFamilies = new Set<string>();
+    const citedEvents = new Set<string>();
+    const citedRelationships = new Set<string>();
+    for (const { data: cit } of index.citations.values()) {
+      if (cit.person_id) citedPeople.add(cit.person_id);
+      if (cit.family_id) citedFamilies.add(cit.family_id);
+      if (cit.event_id) citedEvents.add(cit.event_id);
+      if (cit.relationship_id) citedRelationships.add(cit.relationship_id);
+    }
+    for (const [fid, { data: fam }] of index.families) {
+      for (const [childId, ids] of Object.entries(fam.child_citation_ids ?? {}) as [string, string[]][]) {
+        if (ids.length > 0) {
+          citedPeople.add(childId);
+          citedFamilies.add(fid);
+        }
+      }
+    }
+    const eventHasCitation = (eid?: string): boolean =>
+      !!eid && (citedEvents.has(eid) || !!(index.events.get(eid)?.data?.source_citation_ids?.length));
+    const directKnowledge = (pid: string) => !!index.people.get(pid)?.data?.tags?.includes(DIRECT_KNOWLEDGE_TAG);
+
+    for (const [pid, { data: p, filePath }] of index.people) {
+      if (p.source_citation_ids?.length || citedPeople.has(pid) || directKnowledge(pid)) continue;
+      warn(filePath, 'source_citation_ids', `Persona senza fonti: aggiungi una citazione o il tag ${DIRECT_KNOWLEDGE_TAG}.`);
+    }
+
+    for (const [fid, { data: fam, filePath }] of index.families) {
+      const partners: string[] = fam.partner_ids ?? [];
+      const allPartnersDK = partners.length > 0 && partners.every(directKnowledge);
+      const hasFamEventCit = eventHasCitation(fam.start_event_id) || eventHasCitation(fam.end_event_id);
+      if (!fam.source_citation_ids?.length && !citedFamilies.has(fid) && !hasFamEventCit && !allPartnersDK) {
+        warn(filePath, 'source_citation_ids', `Famiglia senza fonti: aggiungi una citazione (anche child_citation_ids).`);
+        continue;
+      }
+
+      // Singoli legami genitore-figlio (children_ids): avviso non bloccante se manca la fonte del legame.
+      const famCitIds = new Set<string>(fam.source_citation_ids ?? []);
+      for (const [cid, { data: cit }] of index.citations) {
+        if (cit.family_id === fid) famCitIds.add(cid);
+        if (cit.event_id && (cit.event_id === fam.start_event_id || cit.event_id === fam.end_event_id)) famCitIds.add(cid);
+      }
+      for (const eid of [fam.start_event_id, fam.end_event_id]) {
+        for (const cid of index.events.get(eid ?? '')?.data?.source_citation_ids ?? []) famCitIds.add(cid);
+      }
+
+      for (const childId of fam.children_ids ?? []) {
+        if (directKnowledge(childId) || allPartnersDK) continue;
+        if (fam.child_citation_ids?.[childId]?.length) continue;
+
+        const child = index.people.get(childId)?.data;
+        const childEvents = [child?.birth_event_id, child?.death_event_id, child?.burial_event_id].filter(Boolean) as string[];
+        const childCitIds = new Set<string>(child?.source_citation_ids ?? []);
+        for (const eid of childEvents) {
+          for (const cid of index.events.get(eid)?.data?.source_citation_ids ?? []) childCitIds.add(cid);
+        }
+        for (const [cid, { data: cit }] of index.citations) {
+          if (cit.person_id === childId) childCitIds.add(cid);
+          if (cit.event_id && childEvents.includes(cit.event_id)) childCitIds.add(cid);
+        }
+
+        const hasChildLinkSource = [...childCitIds].some((cid) => {
+          const cit = index.citations.get(cid)?.data;
+          return famCitIds.has(cid) || (cit && (cit.family_id === fid || /parentage/.test(cit.claim_type)));
+        });
+        if (!hasChildLinkSource) {
+          warn(
+            filePath,
+            'children_ids',
+            `Legame genitore-figlio senza fonti per ${nameOf(childId)} (${childId}): aggiungi una citazione (anche in child_citation_ids) o il tag ${DIRECT_KNOWLEDGE_TAG}.`,
+            true
+          );
+        }
+      }
+    }
+
+    for (const [eid, { data: evt, filePath }] of index.events) {
+      if (evt.source_citation_ids?.length || citedEvents.has(eid)) continue;
+      const famPartners: string[] = evt.family_id ? (index.families.get(evt.family_id)?.data?.partner_ids ?? []) : [];
+      const involved = [...new Set<string>([...(evt.person_ids ?? []), ...famPartners])];
+      if (involved.length > 0 && involved.every(directKnowledge)) continue;
+      warn(filePath, 'source_citation_ids', `Evento senza fonti: aggiungi una citazione o il tag ${DIRECT_KNOWLEDGE_TAG}.`);
+    }
+
+    for (const [rid, { data: rel, filePath }] of index.relationships) {
+      const hasRelEventCit = eventHasCitation(rel.start_event_id) || eventHasCitation(rel.end_event_id);
+      if (rel.source_citation_ids?.length || citedRelationships.has(rid) || hasRelEventCit) continue;
+      if (rel.person_id && rel.related_person_id && directKnowledge(rel.person_id) && directKnowledge(rel.related_person_id)) continue;
+      warn(filePath, 'source_citation_ids', `Relazione senza fonti: aggiungi una citazione o il tag ${DIRECT_KNOWLEDGE_TAG}.`);
+    }
+  }
+  for (const [eid, { data: evt, filePath }] of index.events) {
+    if (!referencedEvents.has(eid) && !evt.person_ids?.length && !evt.family_id) {
+      warn(filePath, 'id', `Evento non collegato a nessuna persona o famiglia.`);
+    }
+  }
+  for (const [cid, { data: cit, filePath }] of index.citations) {
+    if (!referencedCitations.has(cid) && !cit.person_id && !cit.event_id && !cit.family_id && !cit.relationship_id) {
+      warn(filePath, 'id', `Citazione non collegata a nessun record.`);
+    }
+  }
+  for (const [sid, { filePath }] of index.sources) {
+    if (!citedSources.has(sid)) warn(filePath, 'id', `Fonte senza citazioni né media.`);
+  }
+  for (const [mid, { data: med, filePath }] of index.media) {
+    if (!referencedMedia.has(mid) && !med.person_ids?.length && !med.event_ids?.length && !med.source_id) {
+      warn(filePath, 'id', `Media non collegato a nessun record.`);
+    }
+  }
+
+  return warnings;
+}

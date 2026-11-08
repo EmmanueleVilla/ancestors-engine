@@ -1,0 +1,20 @@
+# Dipendenze e build
+node_modules/
+dist/
+dist-example/
+dist-example-public/
+
+# Output dei test
+tests/fixtures/test-*/
+tests/fixtures/test-config-*.yml
+
+# Log ed editor
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.vscode/
+.idea/
+.env
+.env.*

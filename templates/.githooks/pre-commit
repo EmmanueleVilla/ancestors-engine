@@ -1,0 +1,9 @@
+#!/bin/sh
+# Valida i dati prima di ogni commit che tocca data/ o la configurazione.
+# Per saltarlo in emergenza: git commit --no-verify
+if git diff --cached --name-only | grep -qE '^(data/|archivio\.config\.yml)'; then
+  npx --no-install ancestors validate || {
+    echo "\n[pre-commit] Commit bloccato: correggi gli errori sopra (o usa --no-verify)."
+    exit 1
+  }
+fi

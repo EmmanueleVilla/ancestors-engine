@@ -1,0 +1,10 @@
+id: FAM003_rossi_pietro__ferrari_teresa
+partner_ids:
+  - P005_rossi_pietro
+  - P006_ferrari_teresa
+relationship_type: marriage
+start_event_id: EVT010
+source_citation_ids:
+  - CIT003
+children_ids:
+  - P003_rossi_giorgio

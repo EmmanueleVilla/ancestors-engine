@@ -1,0 +1,9 @@
+id: E002
+event_type: death
+person_ids:
+  - D001
+date:
+  precision: exact
+  year: 1945
+  month: 1
+  day: 1

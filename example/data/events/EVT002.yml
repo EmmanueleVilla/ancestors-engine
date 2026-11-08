@@ -1,0 +1,9 @@
+id: EVT002
+event_type: birth
+person_ids:
+  - P002_bianchi_anna
+date:
+  precision: exact
+  year: 1991
+  month: 7
+  day: 2

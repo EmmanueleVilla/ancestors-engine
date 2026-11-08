@@ -1,0 +1,12 @@
+id: CIT003
+source_id: SRC002
+claim_type: marriage_date_and_parentage
+person_id: P005_rossi_pietro
+event_id: EVT010
+family_id: FAM003_rossi_pietro__ferrari_teresa
+page_or_folio: Anno 1950, Parte I, atto n. 7
+evidence_type: primary
+confidence: certain
+transcribed_by: user
+verified_on_original: true
+quoted_text: "Rossi Pietro, nato a Borgonuovo il 14 febbraio 1925, figlio di Carlo e di Galli Maria [...] Ferrari Teresa, nata a Valfredda l'8 giugno 1928."

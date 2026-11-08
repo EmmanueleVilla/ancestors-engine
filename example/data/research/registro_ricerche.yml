@@ -1,0 +1,47 @@
+# Registro ricerche dell'archivio di esempio: una voce per ogni consultazione, anche negativa.
+searches:
+  - date: 2026-01-10
+    goal: Matrimonio di Carlo Rossi e Maria Galli
+    references: [FAM004_rossi_carlo__galli_maria, P007_rossi_carlo, P008_galli_maria]
+    source: Archivio di Stato (inventato)
+    place: Borgonuovo
+    register: matrimoni
+    years: [1919, 1920, 1921, 1922, 1923, 1924]
+    outcome: not_found
+    performed_by: user
+    method: full_reading
+    search_terms: [Rossi, Galli]
+    coverage: "Registri 1919-1924 letti per intero; il 1918 manca."
+    notes: "Nessun matrimonio di Carlo Rossi nei registri disponibili."
+  - date: 2026-01-10
+    goal: Matrimonio di Carlo Rossi e Maria Galli
+    references: [FAM004_rossi_carlo__galli_maria]
+    source: Archivio di Stato (inventato)
+    place: Valfredda
+    register: matrimoni
+    years: [1918, 1919, 1920]
+    outcome: not_available
+    notes: "Registri di Valfredda non digitalizzati."
+  - date: 2026-01-11
+    goal: Matrimonio di Carlo Rossi e Maria Galli
+    references: [FAM004_rossi_carlo__galli_maria]
+    source: Comune di Valfredda (richiesta via email)
+    place: Valfredda
+    outcome: awaiting_reply
+    method: inquiry
+  - date: 2026-01-12
+    goal: Foglio matricolare di Carlo Rossi
+    references: [P007_rossi_carlo]
+    source: Archivio di Stato (inventato), ruoli matricolari
+    register: ruoli matricolari classe 1893
+    years: [1893]
+    outcome: found
+    performed_by: user_and_assistant
+    method: targeted_reading
+    tools: [scripts/striscia_nomi.py]
+    notes: "Strisce dei nomi lette prima dall'assistente, poi ricontrollate dall'utente."
+  - date: 2026-01-12
+    goal: Lapide di Carlo Rossi e Maria Galli
+    references: [P007_rossi_carlo, P008_galli_maria]
+    source: Cimitero di Borgonuovo
+    outcome: planned

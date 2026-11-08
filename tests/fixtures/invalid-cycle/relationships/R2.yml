@@ -1,0 +1,4 @@
+id: R2
+person_id: B
+related_person_id: A
+relationship_type: biological_parent

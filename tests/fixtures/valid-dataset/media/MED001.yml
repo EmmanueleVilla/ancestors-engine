@@ -1,0 +1,7 @@
+id: MED001
+file_path: assets/photos/sample_doe.jpg
+media_type: photograph
+title: Portrait of William Doe
+person_ids:
+  - P001
+privacy: public

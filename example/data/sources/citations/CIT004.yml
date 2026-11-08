@@ -1,0 +1,14 @@
+id: CIT004
+source_id: SRC001
+claim_type: birth_and_parentage
+person_id: P007_rossi_carlo
+event_id: EVT009
+family_id: FAM005_rossi_angelo__marelli_rosa
+page_or_folio: Anno 1893, atto n. 112
+evidence_type: primary
+confidence: certain
+transcribed_by: assistant
+verified_on_original: true
+quoted_text: "È comparso Rossi Angelo, di anni trentatré, contadino [...] da Marelli Rosa sua moglie [...] è nato un bambino [...] a cui dà il nome di Carlo."
+notes:
+  - "Prima lettura dell'assistente, controllata dall'utente sull'immagine."

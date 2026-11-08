@@ -1,0 +1,13 @@
+id: CIT005
+source_id: SRC003
+claim_type: birth_and_parentage
+person_id: P007_rossi_carlo
+event_id: EVT009
+page_or_folio: Registro 12, matricola 4321
+evidence_type: primary
+confidence: certain
+transcribed_by: user_and_assistant
+verified_on_original: true
+quoted_text: "Rossi Carlo [...] figlio di Angelo e di Marelli Rosa, nato il 28 9mbre 1893 a Borgonuovo."
+notes:
+  - "Il foglio non nomina moglie né figli: non prova che questo Carlo sia il padre di Pietro (vedi FAM004)."

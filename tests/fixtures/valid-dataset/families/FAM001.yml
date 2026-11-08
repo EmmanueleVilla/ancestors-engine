@@ -1,0 +1,7 @@
+id: FAM001
+partner_ids:
+  - P001
+  - P002
+relationship_type: marriage
+children_ids:
+  - P003
