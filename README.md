@@ -1,46 +1,47 @@
 # ancestors-engine
 
-Engine per archivi genealogici scritti in file YAML, pensato per lavorare con un agente LLM:
+An engine for genealogical archives kept as YAML files, designed to be worked on together with an LLM agent:
 
-- **schemi stretti** (Zod) per persone, famiglie, eventi, luoghi, fonti, citazioni e media;
-- **provenienza sui legami**: citazioni e grado di certezza sul singolo legame genitore-figlio;
-- **paradati di lettura**: chi ha trascritto una fonte e se una persona l'ha riletta sull'originale;
-- **registro delle ricerche**, comprese quelle senza risultato, con esiti controllati;
-- **validatore** (riferimenti, cicli, date impossibili, fonti mancanti);
-- **sito statico** con un profilo privato e un profilo pubblico che maschera le persone vive, sostituisce i loro ID con pseudonimi e si ferma se trova una fuga di dati.
+- **strict schemas** (Zod) for persons, families, events, places, sources, citations, and media;
+- **provenance on kinship links**: citations and a confidence level on each single parent–child link;
+- **reading paradata**: who transcribed a source and whether a person re-read it on the original;
+- **research log**, including searches with no result, with a controlled set of outcomes;
+- **validator** (references, cycles, impossible dates, missing sources);
+- **static site** with a private profile and a public profile that masks living persons, replaces their IDs with pseudonyms, and stops the build if it finds a data leak.
 
-Con `ancestors export` il dataset del profilo pubblico si esporta in JSON, per depositarlo come dato aperto.
+The public site also publishes the dataset as JSON (one file per record type, listed on `dati.html`), with the same masking and leak check. `ancestors export` writes the same files to a folder, for deposit elsewhere as open data.
 
-I dati di un archivio reale stanno in un repository **privato** separato, che usa l'engine come dipendenza.
+The data of a real archive live in a separate **private** repository that uses the engine as a dependency.
 
-## Provare l'esempio
+## Try the example
 
 ```sh
 npm install
 npm run example:check
-npm run example:site          # sito privato in dist-example/
-npm run example:site:public   # sito pubblico in dist-example-public/
+npm run example:site          # private site in dist-example/
+npm run example:site:public   # public site in dist-example-public/
 ```
 
-L'esempio (`example/`) è una famiglia inventata.
+The example (`example/`) is an invented family.
 
-## Usare l'engine in un archivio
+## Use the engine in an archive
 
 ```json
-"dependencies": { "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.0.0" },
+"dependencies": { "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.1.0" },
 "scripts": {
   "check": "ancestors validate --strict",
   "site": "ancestors build --profile private",
-  "site:public": "ancestors build --profile public"
+  "site:public": "ancestors build --profile public",
+  "export": "ancestors export -o export-public"
 }
 ```
 
-I passi completi sono in [_docs/nuovo-archivio.md](_docs/nuovo-archivio.md). I file di partenza sono in `templates/`.
+The full steps are in [_docs/nuovo-archivio.md](_docs/nuovo-archivio.md). Starter files are in `templates/`.
 
-## Documentazione
+## Documentation
 
-La documentazione, per persone e agenti LLM, è in [_docs/](_docs/README.md).
+The documentation, for people and LLM agents, is in [_docs/](_docs/README.md). It is written in Italian, like the interface of the generated site and the example archive.
 
-## Licenza
+## License
 
-MIT. Vedi [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
