@@ -26,6 +26,8 @@ export interface GenerateOptions {
   nextStepsMarkdown?: string;
   /** Layout dell'albero dalla configurazione dell'archivio (ID già pseudonimizzati nel profilo pubblico). */
   treeLayout?: TreeLayout;
+  /** Radice dell'archivio: i file_path dei media sono relativi a questa cartella. */
+  archiveRoot?: string;
   /** Titoli, testi, radice e colori dell'archivio. */
   site?: Partial<SiteSettings>;
 }
@@ -161,19 +163,15 @@ export function generateStaticSite(dataset: NormalizedDataset, options: Generate
     }
   }
 
-  // 12. Copy media files to output directory if present
-  const dataMediaDir = path.resolve(process.cwd(), 'data/media');
-  if (fs.existsSync(dataMediaDir)) {
-    const outMediaDir = path.join(outDir, 'media');
-    if (!fs.existsSync(outMediaDir)) {
-      fs.mkdirSync(outMediaDir, { recursive: true });
-    }
-    const mediaFiles = fs.readdirSync(dataMediaDir);
-    for (const file of mediaFiles) {
-      const lower = file.toLowerCase();
-      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp') || lower.endsWith('.pdf')) {
-        fs.copyFileSync(path.join(dataMediaDir, file), path.join(outMediaDir, file));
-      }
-    }
+  // 12. Copia solo i media del dataset (già filtrato dal profilo) in media/, dove le pagine li cercano.
+  //     La cartella viene svuotata: un build precedente non deve lasciare file (per esempio media di persone vive).
+  const outMediaDir = path.join(outDir, 'media');
+  fs.rmSync(outMediaDir, { recursive: true, force: true });
+  const archiveRoot = options.archiveRoot ? path.resolve(options.archiveRoot) : process.cwd();
+  for (const med of dataset.media.values()) {
+    const src = path.resolve(archiveRoot, med.file_path);
+    if (!fs.existsSync(src)) continue;
+    fs.mkdirSync(outMediaDir, { recursive: true });
+    fs.copyFileSync(src, path.join(outMediaDir, path.basename(med.file_path)));
   }
 }

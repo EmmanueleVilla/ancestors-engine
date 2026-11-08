@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { runValidateCommand } from './validate.js';
 import { runBuildCommand } from './build.js';
 import { BuildProfile } from '../config/index.js';
@@ -125,8 +127,18 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   }
 }
 
-// Auto-run if executed directly
-if (process.argv[1]?.endsWith('cli/index.ts') || process.argv[1]?.endsWith('cli/index.js')) {
+// Auto-run if executed directly, also through the npm bin symlink (node_modules/.bin/ancestors)
+function isDirectRun(): boolean {
+  const arg = process.argv[1];
+  if (!arg) return false;
+  try {
+    return fs.realpathSync(arg) === fs.realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return arg.endsWith('cli/index.ts') || arg.endsWith('cli/index.js');
+  }
+}
+
+if (isDirectRun()) {
   const code = main();
   process.exit(code);
 }

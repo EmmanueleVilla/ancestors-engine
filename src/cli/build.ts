@@ -5,7 +5,7 @@ import { generateStaticSite } from '../generator/index.js';
 import { applyPublicProfile } from '../privacy/filter.js';
 import { findLeaks } from '../privacy/leak-check.js';
 import { loadArchiveConfig } from '../config/archive.js';
-import { copyReferencedMedia, findMissingMedia } from '../generator/assets/copy.js';
+import { findMissingMedia } from '../generator/assets/copy.js';
 import { BuildProfile } from '../config/index.js';
 
 export interface BuildCliOptions {
@@ -107,6 +107,7 @@ export function runBuildCommand(options: BuildCliOptions): number {
       assetsDir,
       nextStepsMarkdown: fs.existsSync(nextStepsPath) ? fs.readFileSync(nextStepsPath, 'utf-8') : undefined,
       treeLayout,
+      archiveRoot,
       site: {
         ...(s.title ? { title: s.title } : {}),
         ...(s.subtitle ? { subtitle: s.subtitle } : {}),
@@ -118,11 +119,6 @@ export function runBuildCommand(options: BuildCliOptions): number {
         seriesColors: s.series_colors.map((c) => ({ color: c.color, onColor: c.on_color })),
       },
     });
-    // Copia solo i media rimasti dopo il filtro privacy (nel profilo pubblico niente media dei vivi)
-    // Prima si svuota la cartella dei media: un build privato precedente nella stessa cartella non deve lasciare file.
-    fs.rmSync(path.join(outDir, 'data'), { recursive: true, force: true });
-    copyReferencedMedia(filteredDataset.media, archiveRoot, outDir);
-
     // 5. Controllo anti-fuga sul profilo pubblico
     if (publicResult) {
       const leaks = findLeaks(outDir, validation.dataset, publicResult.maskedIds);
