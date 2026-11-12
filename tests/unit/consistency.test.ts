@@ -6,6 +6,7 @@ import { loadAndValidateDataset } from '../../src/validator/index.js';
 import { dateBounds } from '../../src/validator/consistency.js';
 import { runValidateCommand } from '../../src/cli/validate.js';
 
+let baseDir: string;
 let dir: string;
 
 function write(rel: string, content: string) {
@@ -36,10 +37,12 @@ function baseFamily() {
 const messages = () => loadAndValidateDataset(dir).warnings.map((w) => w.message);
 
 beforeEach(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ancestors-consistency-'));
+  baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ancestors-consistency-'));
+  dir = path.join(baseDir, 'data');
+  fs.mkdirSync(dir, { recursive: true });
 });
 afterEach(() => {
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(baseDir, { recursive: true, force: true });
 });
 
 describe('Errori bloccanti', () => {
@@ -165,9 +168,9 @@ describe('Avvisi di coerenza', () => {
     write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: DAD\nevent_id: E_DAD_B\nfamily_id: F1\n');
     write('sources/citations/C2.yml', 'id: C2\nsource_id: SRC1\nclaim_type: birth\nperson_id: MOM\nevent_id: E_MOM_B\n');
     write('sources/citations/C3.yml', 'id: C3\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\n');
-    // KID e F1 hanno fonti, ma nessuna citazione collega KID a F1: avviso sul legame (non bloccante in --strict)
+    // KID e F1 hanno fonti, ma nessuna citazione collega KID a F1: avviso sul legame (ora bloccante in --strict)
     expect(messages()).toContainEqual(expect.stringMatching(/Legame genitore-figlio senza fonti per KID/));
-    expect(runValidateCommand({ dataDir: dir, silent: true, strict: true })).toBe(0);
+    expect(runValidateCommand({ dataDir: dir, silent: true, strict: true })).toBe(1);
     // Relazione esplicita senza fonti: bloccante in --strict
     write('relationships/R1.yml', 'id: R1\nperson_id: DAD\nrelated_person_id: KID\nrelationship_type: guardian\n');
     expect(messages()).toContainEqual(expect.stringMatching(/Relazione senza fonti/));
@@ -213,6 +216,33 @@ describe('Avvisi di coerenza', () => {
     person('LONE');
     expect(runValidateCommand({ dataDir: dir, silent: true })).toBe(0);
     expect(runValidateCommand({ dataDir: dir, silent: true, strict: true })).toBe(1);
+  });
+
+  it('persona con entrambi i genitori che definisce parents_next_step: avviso bloccante', () => {
+    baseFamily();
+    // KID ha già DAD e MOM come genitori
+    person('KID', 'sex: male\nbirth_event_id: E_KID_B\nparents_next_step: "Cercare genitori di KID"\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/ha entrambi i genitori documentati/));
+    expect(runValidateCommand({ dataDir: dir, silent: true, strict: true })).toBe(1);
+  });
+
+  it('antenato diretto privo di genitori e senza parents_next_step: avviso bloccante se rootId configurato', () => {
+    baseFamily();
+    // Scriviamo archivio.config.yml con root_id: KID
+    fs.writeFileSync(
+      path.join(path.dirname(dir), 'archivio.config.yml'),
+      'tree:\n  root_id: KID\n'
+    );
+    // DAD e MOM sono antenati diretti di KID e non hanno genitori né parents_next_step
+    const msgs = messages();
+    expect(msgs).toContainEqual(expect.stringMatching(/Antenato diretto \(DAD Test\) privo di genitori documentati/));
+    expect(msgs).toContainEqual(expect.stringMatching(/Antenato diretto \(MOM Test\) privo di genitori documentati/));
+    expect(runValidateCommand({ dataDir: dir, silent: true, strict: true })).toBe(1);
+
+    // Se compiliamo parents_next_step per DAD e MOM, l'errore scompare
+    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\nparents_next_step: "Cercare genitori DAD"\n');
+    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\nparents_next_step: "Cercare genitori MOM"\n');
+    expect(messages().filter((m) => m.includes('parents_next_step'))).toEqual([]);
   });
 });
 

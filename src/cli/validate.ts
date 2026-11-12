@@ -41,8 +41,8 @@ export function runValidateCommand(options: ValidateCliOptions): number {
     return 1;
   }
 
-  const strictErrors = options.strict ? result.warnings.filter((w) => !w.nonBlocking) : [];
-  const advisoryWarnings = options.strict ? result.warnings.filter((w) => w.nonBlocking) : result.warnings;
+  const strictErrors = options.strict ? result.warnings : [];
+  const advisoryWarnings = options.strict ? [] : result.warnings;
 
   if (strictErrors.length > 0 && !silent) {
     console.warn(`\n[ERROR] ${strictErrors.length} anomali${strictErrors.length === 1 ? 'a' : 'e'} da controllare:`);

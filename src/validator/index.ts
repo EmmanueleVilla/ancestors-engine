@@ -11,10 +11,12 @@ import { MediaSchema, Media } from '../model/media.js';
 import { ResearchLogSchema, ResearchEntry } from '../model/research.js';
 import { scanDirectoryRecursive } from '../parser/discover.js';
 import path from 'node:path';
+import fs from 'node:fs';
 import { deriveRelationships } from './derive.js';
 import { validateReferences, DatasetIndex, ValidationError } from './reference.js';
 import { detectKinshipCycles } from './cycle.js';
 import { checkConsistency } from './consistency.js';
+import { loadArchiveConfig } from '../config/archive.js';
 
 export interface NormalizedDataset {
   people: Map<string, Person>;
@@ -195,10 +197,26 @@ export function loadAndValidateDataset(dataDir: string): LoadAndValidateResult {
     }
   }
 
-  // 4. Coerenza (date, età, collegamenti, record orfani): solo avvisi
+  // 4. Coerenza (date, età, collegamenti, record orfani)
+  let rootId: string | undefined;
+  for (const cand of [path.join(path.dirname(dataDir), 'archivio.config.yml'), path.join(dataDir, 'archivio.config.yml')]) {
+    if (fs.existsSync(cand)) {
+      try {
+        const cfg = loadArchiveConfig(cand);
+        if (cfg.config.tree?.root_id) {
+          rootId = cfg.config.tree.root_id;
+          break;
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   const warnings = errors.length === 0 ? checkConsistency(index, {
     media: research.flatMap((r) => r.media ?? []),
     records: research.flatMap((r) => r.references),
+    rootId,
   }) : [];
 
   const valid = errors.length === 0;

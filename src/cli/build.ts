@@ -49,7 +49,7 @@ export function runBuildCommand(options: BuildCliOptions): number {
   }
 
   if (validation.warnings.length > 0) {
-    const strictErrors = options.strict ? validation.warnings.filter((w) => !w.nonBlocking) : [];
+    const strictErrors = options.strict ? validation.warnings : [];
     if (strictErrors.length > 0) {
       if (!silent) console.error(`\n[ERROR] Build halted: ${strictErrors.length} warning(s) in strict mode. Run 'validate' to see them.`);
       return 1;

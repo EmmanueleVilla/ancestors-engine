@@ -73,6 +73,7 @@ const EXPECTED_EVENT_TYPES: Record<string, string[]> = {
 export interface ExtraReferences {
   media?: Iterable<string>;
   records?: Iterable<string>;
+  rootId?: string;
 }
 
 /** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
@@ -184,6 +185,79 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
         const gap = sex === 'female' ? 0 : POSTHUMOUS_GAP;
         if (surelyAfter(childBirth, parentDeath, gap)) {
           warn(filePath, 'children_ids', `${who}: figlio nato dopo la morte del genitore.`);
+        }
+      }
+    }
+  }
+
+  // ---- Coerenza genitori e parents_next_step ----
+  const parentsByChild = new Map<string, Set<string>>();
+  for (const [, { data: fam }] of index.families) {
+    const partners = fam.partner_ids ?? [];
+    for (const childId of fam.children_ids ?? []) {
+      let set = parentsByChild.get(childId);
+      if (!set) {
+        set = new Set();
+        parentsByChild.set(childId, set);
+      }
+      for (const p of partners) set.add(p);
+    }
+  }
+
+  // 1. Persona con entrambi i genitori collegati che definisce ancora parents_next_step
+  for (const [pid, { data: p, filePath }] of index.people) {
+    if (p.parents_next_step && p.parents_next_step.trim().length > 0) {
+      const parents = parentsByChild.get(pid);
+      if (parents) {
+        const sexes = [...parents].map((id) => index.people.get(id)?.data?.sex);
+        const hasMale = sexes.includes('male');
+        const hasFemale = sexes.includes('female');
+        const hasBoth = (hasMale && hasFemale) || parents.size >= 2;
+        if (hasBoth) {
+          const parentNames = [...parents].map(nameOf).join(' e ');
+          warn(
+            filePath,
+            'parents_next_step',
+            `La persona ha entrambi i genitori documentati (${parentNames}), ma definisce ancora parents_next_step. Questo testo non viene mostrato nell'albero né nella scheda persona.`
+          );
+        }
+      }
+    }
+  }
+
+  // 2. Antenati diretti dell'albero primario privi di genitori ma senza parents_next_step
+  if (extra.rootId && index.people.has(extra.rootId)) {
+    const directAncestors = new Set<string>();
+    const queue = [extra.rootId];
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      if (directAncestors.has(curr)) continue;
+      directAncestors.add(curr);
+      const parents = parentsByChild.get(curr);
+      if (parents) {
+        for (const parentId of parents) {
+          if (!directAncestors.has(parentId)) queue.push(parentId);
+        }
+      }
+    }
+
+    for (const pid of directAncestors) {
+      const personEntry = index.people.get(pid);
+      if (!personEntry) continue;
+      const { data: p, filePath } = personEntry;
+      const parents = parentsByChild.get(pid);
+      const sexes = parents ? [...parents].map((id) => index.people.get(id)?.data?.sex) : [];
+      const hasMale = sexes.includes('male');
+      const hasFemale = sexes.includes('female');
+      const hasBoth = (hasMale && hasFemale) || (parents && parents.size >= 2);
+
+      if (!hasBoth) {
+        if (!p.parents_next_step || p.parents_next_step.trim().length === 0) {
+          warn(
+            filePath,
+            'parents_next_step',
+            `Antenato diretto (${nameOf(pid)}) privo di genitori documentati, ma senza parents_next_step: compilare le istruzioni di ricerca per la tessera '?' dell'albero.`
+          );
         }
       }
     }
@@ -301,8 +375,7 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
           warn(
             filePath,
             'children_ids',
-            `Legame genitore-figlio senza fonti per ${nameOf(childId)} (${childId}): aggiungi una citazione (anche in child_citation_ids) o il tag ${DIRECT_KNOWLEDGE_TAG}.`,
-            true
+            `Legame genitore-figlio senza fonti per ${nameOf(childId)} (${childId}): aggiungi una citazione (anche in child_citation_ids) o il tag ${DIRECT_KNOWLEDGE_TAG}.`
           );
         }
       }
