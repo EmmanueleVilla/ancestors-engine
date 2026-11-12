@@ -1,5 +1,6 @@
 import type { DateValue } from '../model/date.js';
 import type { DatasetIndex, ValidationError } from './reference.js';
+import { buildParentsOf, directAncestorsOf, isParentRelationship, missingParents, type LineageRelationship } from './lineage.js';
 
 /**
  * Controlli di coerenza "morbidi": non bloccano la build (salvo `--strict`),
@@ -73,7 +74,14 @@ const EXPECTED_EVENT_TYPES: Record<string, string[]> = {
 export interface ExtraReferences {
   media?: Iterable<string>;
   records?: Iterable<string>;
+  /** Relazioni, comprese quelle derivate dalle famiglie: servono per contare i genitori. */
+  relationships?: LineageRelationship[];
+  /** Radice dell'albero (`tree.root_id`): attiva i controlli sugli antenati diretti. */
+  rootId?: string;
 }
+
+/** Persona vivente riservata: il sito non ne mostra i dettagli. */
+const LIVING_RESTRICTED = 'living-person restricted';
 
 /** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
 const DETACHED_TAG = 'scollegato';
@@ -86,8 +94,7 @@ export const DIRECT_KNOWLEDGE_TAG = 'conoscenza_diretta';
 
 export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {}): ValidationError[] {
   const warnings: ValidationError[] = [];
-  const warn = (filePath: string, field: string, message: string, nonBlocking = false) =>
-    warnings.push({ filePath, field, message, ...(nonBlocking ? { nonBlocking: true } : {}) });
+  const warn = (filePath: string, field: string, message: string) => warnings.push({ filePath, field, message });
 
   const eventDate = (id?: string): Bounds | null =>
     id ? dateBounds(index.events.get(id)?.data?.date) : null;
@@ -187,6 +194,55 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
         }
       }
     }
+  }
+
+  // ---- parents_next_step: stessa logica di albero e scheda persona ----
+  // Il testo compare nella scheda persona se la persona non è riservata e ha meno di due legami
+  // genitore (pages/person.ts), e sul segnaposto "?" dell'albero se è un antenato diretto
+  // della radice a cui manca il padre o la madre (components/tree.ts).
+  const relationships = extra.relationships ?? [];
+  const familyData = [...index.families.values()].map((f) => f.data);
+  const parentsOf = buildParentsOf(familyData, relationships);
+  const parentRelCount = new Map<string, number>();
+  for (const rel of relationships) {
+    if (isParentRelationship(rel)) parentRelCount.set(rel.related_person_id, (parentRelCount.get(rel.related_person_id) ?? 0) + 1);
+  }
+  const isRestricted = (pid: string) => index.people.get(pid)?.data?.privacy === LIVING_RESTRICTED;
+  const missingOf = (pid: string) =>
+    missingParents([...(parentsOf.get(pid) || [])].map((id) => index.people.get(id)?.data?.sex));
+  const hasNextStep = (p: { parents_next_step?: string }) => !!p.parents_next_step?.trim();
+
+  const rootId = extra.rootId && index.people.has(extra.rootId) ? extra.rootId : undefined;
+  const directAncestors = rootId ? directAncestorsOf(rootId, familyData, parentsOf) : [];
+  const ancestorSet = new Set(directAncestors);
+
+  for (const [pid, { data: p, filePath }] of index.people) {
+    if (!hasNextStep(p)) continue;
+    const shownOnPage = !isRestricted(pid) && (parentRelCount.get(pid) ?? 0) < 2;
+    const shownOnTree = ancestorSet.has(pid) && !isRestricted(pid) && missingOf(pid) !== null;
+    if (!shownOnPage && !shownOnTree) {
+      const parentNames = [...(parentsOf.get(pid) || [])].map(nameOf).join(' e ');
+      warn(
+        filePath,
+        'parents_next_step',
+        isRestricted(pid)
+          ? `Persona riservata (vivente): parents_next_step non viene mostrato né nell'albero né nella scheda persona.`
+          : `La persona ha già i genitori documentati (${parentNames}): parents_next_step non viene mostrato né nell'albero né nella scheda persona.`
+      );
+    }
+  }
+
+  for (const pid of directAncestors) {
+    const entry = index.people.get(pid);
+    if (!entry || isRestricted(pid) || hasNextStep(entry.data)) continue;
+    const missing = missingOf(pid);
+    if (!missing) continue;
+    const what = missing === 'both' ? 'padre e madre' : missing === 'father' ? 'il padre' : 'la madre';
+    warn(
+      entry.filePath,
+      'parents_next_step',
+      `Antenato diretto (${nameOf(pid)}) senza ${what} e senza parents_next_step: indica come cercarli, il testo compare sul segnaposto "?" dell'albero.`
+    );
   }
 
   // ---- Record che nessuno richiama ----
@@ -301,8 +357,7 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
           warn(
             filePath,
             'children_ids',
-            `Legame genitore-figlio senza fonti per ${nameOf(childId)} (${childId}): aggiungi una citazione (anche in child_citation_ids) o il tag ${DIRECT_KNOWLEDGE_TAG}.`,
-            true
+            `Legame genitore-figlio senza fonti per ${nameOf(childId)} (${childId}): aggiungi una citazione (anche in child_citation_ids) o il tag ${DIRECT_KNOWLEDGE_TAG}.`
           );
         }
       }

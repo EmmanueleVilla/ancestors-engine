@@ -1,8 +1,11 @@
 import path from 'node:path';
 import { loadAndValidateDataset } from '../validator/index.js';
+import { loadArchiveConfig } from '../config/archive.js';
 
 export interface ValidateCliOptions {
   dataDir?: string;
+  /** File di configurazione dell'archivio (default: ./archivio.config.yml). */
+  configPath?: string;
   strict?: boolean;
   verbose?: boolean;
   silent?: boolean;
@@ -16,7 +19,21 @@ export function runValidateCommand(options: ValidateCliOptions): number {
     console.log(`[INFO] Scanning and validating dataset in ${dataDir}...`);
   }
 
-  const result = loadAndValidateDataset(dataDir);
+  const configPath = path.resolve(options.configPath || './archivio.config.yml');
+  const configResult = loadArchiveConfig(configPath);
+  if (configResult.error) {
+    if (!silent) console.error(`\n[ERROR] Configurazione non valida (${configPath}): ${configResult.error}`);
+    return 1;
+  }
+  if (configResult.missing && options.configPath) {
+    if (!silent) console.error(`\n[ERROR] File di configurazione non trovato: ${configPath}`);
+    return 1;
+  }
+  if (configResult.missing && !silent && options.verbose) {
+    console.log(`[INFO] Nessun ${path.relative(process.cwd(), configPath)}: controlli sugli antenati diretti disattivati.`);
+  }
+
+  const result = loadAndValidateDataset(dataDir, { rootId: configResult.config.tree.root_id });
 
   if (!silent && options.verbose) {
     console.log(`[INFO] Discovered records:`);
@@ -41,8 +58,8 @@ export function runValidateCommand(options: ValidateCliOptions): number {
     return 1;
   }
 
-  const strictErrors = options.strict ? result.warnings.filter((w) => !w.nonBlocking) : [];
-  const advisoryWarnings = options.strict ? result.warnings.filter((w) => w.nonBlocking) : result.warnings;
+  const strictErrors = options.strict ? result.warnings : [];
+  const advisoryWarnings = options.strict ? [] : result.warnings;
 
   if (strictErrors.length > 0 && !silent) {
     console.warn(`\n[ERROR] ${strictErrors.length} anomali${strictErrors.length === 1 ? 'a' : 'e'} da controllare:`);

@@ -1,6 +1,6 @@
 # Configurazione dell'archivio
 
-Ogni archivio ha un file `archivio.config.yml` nella sua radice. L'engine lo legge a ogni build. Lo schema è in `src/config/archive.ts`. Un esempio completo è `example/archivio.config.yml`.
+Ogni archivio ha un file `archivio.config.yml` nella sua radice. L'engine lo legge a ogni `build` e `validate` (percorso diverso con `-c`). Lo schema è in `src/config/archive.ts`. Un esempio completo è `example/archivio.config.yml`.
 
 **Perché:** il codice dell'engine è pubblico e non deve contenere nomi, ID o testi di un archivio reale.
 
@@ -17,7 +17,7 @@ Ogni archivio ha un file `archivio.config.yml` nella sua radice. L'engine lo leg
 | `next_steps_file` | File dei prossimi passi, solo nel sito privato |
 | `privacy.named_living_ids` | Persone vive che nel sito pubblico tengono nome e ID |
 | `privacy.pseudonym_key` | Chiave degli pseudonimi degli ID delle persone vive |
-| `tree.root_id` | Persona radice dell'albero principale |
+| `tree.root_id` | Persona radice dell'albero principale. `validate` lo usa per controllare `parents_next_step` sugli antenati diretti |
 | `tree.mirror_root_id` | Coniuge della radice: i suoi antenati scendono verso il basso |
 | `tree.positions` | Posizioni manuali dei nodi: `ID: { x: …, y: … }` |
 

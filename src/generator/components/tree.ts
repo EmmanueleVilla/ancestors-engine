@@ -6,6 +6,7 @@ import { formatResearchYears, type ResearchEntry } from '../../model/research.js
 import { isPdfMedia } from '../../model/media.js';
 import { serieOf } from './serie.js';
 import { getRootPersonId } from '../site.js';
+import { buildParentsOf, directAncestorsOf, missingParents } from '../../validator/lineage.js';
 
 export function renderTreeNode(personId: string, dataset: NormalizedDataset, rootRelPath: string = '../'): string {
   const person = dataset.people.get(personId);
@@ -688,48 +689,15 @@ function addUnknownParentPlaceholders(
 ): void {
   if (!rootId || rootId !== getRootPersonId(dataset) || !nodesMap.has(rootId)) return;
 
-  const parentsOf = new Map<string, Set<string>>();
-  for (const fam of dataset.families.values()) {
-    for (const childId of fam.children_ids || []) {
-      const set = parentsOf.get(childId) || new Set<string>();
-      for (const pid of fam.partner_ids || []) set.add(pid);
-      parentsOf.set(childId, set);
-    }
-  }
-  for (const rel of dataset.relationships) {
-    if (!rel.relationship_type.endsWith('_parent')) continue;
-    const set = parentsOf.get(rel.related_person_id) || new Set<string>();
-    set.add(rel.person_id);
-    parentsOf.set(rel.related_person_id, set);
-  }
+  const parentsOf = buildParentsOf(dataset.families.values(), dataset.relationships);
 
-  // Anche il coniuge con cui la radice ha figli: i suoi antenati sono linea diretta dei figli.
-  const coParents = new Set<string>();
-  for (const fam of dataset.families.values()) {
-    if (!(fam.partner_ids || []).includes(rootId) || (fam.children_ids || []).length === 0) continue;
-    for (const pid of fam.partner_ids || []) if (pid !== rootId) coParents.add(pid);
-  }
-
-  const ancestors: string[] = [];
-  const seen = new Set<string>([rootId]);
-  const queue = [...(parentsOf.get(rootId) || []), ...coParents];
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    ancestors.push(id);
-    queue.push(...(parentsOf.get(id) || []));
-  }
-
-  for (const id of ancestors) {
+  for (const id of directAncestorsOf(rootId, dataset.families.values(), parentsOf)) {
     const person = dataset.people.get(id);
     const node = nodesMap.get(id);
     if (!person || !node || person.privacy === 'living-person restricted') continue;
     const parents = [...(parentsOf.get(id) || [])].map((pid) => dataset.people.get(pid)).filter((p): p is Person => !!p);
-    const hasFather = parents.some((p) => p.sex === 'male');
-    const hasMother = parents.some((p) => p.sex === 'female');
-    if (hasFather && hasMother) continue;
-    const missing: 'both' | 'father' | 'mother' = !hasFather && !hasMother ? 'both' : hasFather ? 'mother' : 'father';
+    const missing = missingParents(parents.map((p) => p.sex));
+    if (!missing) continue;
     const childName = getPersonDisplayName(person);
     const research = (dataset.research || [])
       .filter((r) => r.references.includes(id))

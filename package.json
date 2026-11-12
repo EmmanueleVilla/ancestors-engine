@@ -31,7 +31,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p .",
-    "example:check": "tsx src/cli/index.ts validate --strict -d example/data",
+    "example:check": "tsx src/cli/index.ts validate --strict -d example/data -c example/archivio.config.yml",
     "example:site": "npm run build && cd example && node ../dist/cli/index.js build --profile private -o ../dist-example",
     "example:site:public": "npm run build && cd example && node ../dist/cli/index.js build --profile public -o ../dist-example-public",
     "prepare": "npm run build && (git config core.hooksPath .githooks 2>/dev/null || true)"

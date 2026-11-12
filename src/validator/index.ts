@@ -49,7 +49,12 @@ export interface LoadAndValidateResult {
   };
 }
 
-export function loadAndValidateDataset(dataDir: string): LoadAndValidateResult {
+export interface LoadAndValidateOptions {
+  /** Radice dell'albero (`tree.root_id` della configurazione): attiva i controlli sugli antenati diretti. */
+  rootId?: string;
+}
+
+export function loadAndValidateDataset(dataDir: string, options: LoadAndValidateOptions = {}): LoadAndValidateResult {
   const discovered = discoverEntityFiles(dataDir);
   const errors: ValidationError[] = [];
 
@@ -195,10 +200,12 @@ export function loadAndValidateDataset(dataDir: string): LoadAndValidateResult {
     }
   }
 
-  // 4. Coerenza (date, età, collegamenti, record orfani): solo avvisi
+  // 4. Coerenza (date, età, collegamenti, record orfani, parents_next_step)
   const warnings = errors.length === 0 ? checkConsistency(index, {
     media: research.flatMap((r) => r.media ?? []),
     records: research.flatMap((r) => r.references),
+    relationships: derivedRels,
+    rootId: options.rootId,
   }) : [];
 
   const valid = errors.length === 0;
