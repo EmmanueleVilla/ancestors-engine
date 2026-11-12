@@ -1,5 +1,6 @@
 import type { DateValue } from '../model/date.js';
 import type { DatasetIndex, ValidationError } from './reference.js';
+import { buildParentsOf, directAncestorsOf, isParentRelationship, missingParents, type LineageRelationship } from './lineage.js';
 
 /**
  * Controlli di coerenza "morbidi": non bloccano la build (salvo `--strict`),
@@ -73,8 +74,14 @@ const EXPECTED_EVENT_TYPES: Record<string, string[]> = {
 export interface ExtraReferences {
   media?: Iterable<string>;
   records?: Iterable<string>;
+  /** Relazioni, comprese quelle derivate dalle famiglie: servono per contare i genitori. */
+  relationships?: LineageRelationship[];
+  /** Radice dell'albero (`tree.root_id`): attiva i controlli sugli antenati diretti. */
   rootId?: string;
 }
+
+/** Persona vivente riservata: il sito non ne mostra i dettagli. */
+const LIVING_RESTRICTED = 'living-person restricted';
 
 /** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
 const DETACHED_TAG = 'scollegato';
@@ -87,8 +94,7 @@ export const DIRECT_KNOWLEDGE_TAG = 'conoscenza_diretta';
 
 export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {}): ValidationError[] {
   const warnings: ValidationError[] = [];
-  const warn = (filePath: string, field: string, message: string, nonBlocking = false) =>
-    warnings.push({ filePath, field, message, ...(nonBlocking ? { nonBlocking: true } : {}) });
+  const warn = (filePath: string, field: string, message: string) => warnings.push({ filePath, field, message });
 
   const eventDate = (id?: string): Bounds | null =>
     id ? dateBounds(index.events.get(id)?.data?.date) : null;
@@ -190,77 +196,53 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     }
   }
 
-  // ---- Coerenza genitori e parents_next_step ----
-  const parentsByChild = new Map<string, Set<string>>();
-  for (const [, { data: fam }] of index.families) {
-    const partners = fam.partner_ids ?? [];
-    for (const childId of fam.children_ids ?? []) {
-      let set = parentsByChild.get(childId);
-      if (!set) {
-        set = new Set();
-        parentsByChild.set(childId, set);
-      }
-      for (const p of partners) set.add(p);
-    }
+  // ---- parents_next_step: stessa logica di albero e scheda persona ----
+  // Il testo compare nella scheda persona se la persona non è riservata e ha meno di due legami
+  // genitore (pages/person.ts), e sul segnaposto "?" dell'albero se è un antenato diretto
+  // della radice a cui manca il padre o la madre (components/tree.ts).
+  const relationships = extra.relationships ?? [];
+  const familyData = [...index.families.values()].map((f) => f.data);
+  const parentsOf = buildParentsOf(familyData, relationships);
+  const parentRelCount = new Map<string, number>();
+  for (const rel of relationships) {
+    if (isParentRelationship(rel)) parentRelCount.set(rel.related_person_id, (parentRelCount.get(rel.related_person_id) ?? 0) + 1);
   }
+  const isRestricted = (pid: string) => index.people.get(pid)?.data?.privacy === LIVING_RESTRICTED;
+  const missingOf = (pid: string) =>
+    missingParents([...(parentsOf.get(pid) || [])].map((id) => index.people.get(id)?.data?.sex));
+  const hasNextStep = (p: { parents_next_step?: string }) => !!p.parents_next_step?.trim();
 
-  // 1. Persona con entrambi i genitori collegati che definisce ancora parents_next_step
+  const rootId = extra.rootId && index.people.has(extra.rootId) ? extra.rootId : undefined;
+  const directAncestors = rootId ? directAncestorsOf(rootId, familyData, parentsOf) : [];
+  const ancestorSet = new Set(directAncestors);
+
   for (const [pid, { data: p, filePath }] of index.people) {
-    if (p.parents_next_step && p.parents_next_step.trim().length > 0) {
-      const parents = parentsByChild.get(pid);
-      if (parents) {
-        const sexes = [...parents].map((id) => index.people.get(id)?.data?.sex);
-        const hasMale = sexes.includes('male');
-        const hasFemale = sexes.includes('female');
-        const hasBoth = (hasMale && hasFemale) || parents.size >= 2;
-        if (hasBoth) {
-          const parentNames = [...parents].map(nameOf).join(' e ');
-          warn(
-            filePath,
-            'parents_next_step',
-            `La persona ha entrambi i genitori documentati (${parentNames}), ma definisce ancora parents_next_step. Questo testo non viene mostrato nell'albero né nella scheda persona.`
-          );
-        }
-      }
+    if (!hasNextStep(p)) continue;
+    const shownOnPage = !isRestricted(pid) && (parentRelCount.get(pid) ?? 0) < 2;
+    const shownOnTree = ancestorSet.has(pid) && !isRestricted(pid) && missingOf(pid) !== null;
+    if (!shownOnPage && !shownOnTree) {
+      const parentNames = [...(parentsOf.get(pid) || [])].map(nameOf).join(' e ');
+      warn(
+        filePath,
+        'parents_next_step',
+        isRestricted(pid)
+          ? `Persona riservata (vivente): parents_next_step non viene mostrato né nell'albero né nella scheda persona.`
+          : `La persona ha già i genitori documentati (${parentNames}): parents_next_step non viene mostrato né nell'albero né nella scheda persona.`
+      );
     }
   }
 
-  // 2. Antenati diretti dell'albero primario privi di genitori ma senza parents_next_step
-  if (extra.rootId && index.people.has(extra.rootId)) {
-    const directAncestors = new Set<string>();
-    const queue = [extra.rootId];
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
-      if (directAncestors.has(curr)) continue;
-      directAncestors.add(curr);
-      const parents = parentsByChild.get(curr);
-      if (parents) {
-        for (const parentId of parents) {
-          if (!directAncestors.has(parentId)) queue.push(parentId);
-        }
-      }
-    }
-
-    for (const pid of directAncestors) {
-      const personEntry = index.people.get(pid);
-      if (!personEntry) continue;
-      const { data: p, filePath } = personEntry;
-      const parents = parentsByChild.get(pid);
-      const sexes = parents ? [...parents].map((id) => index.people.get(id)?.data?.sex) : [];
-      const hasMale = sexes.includes('male');
-      const hasFemale = sexes.includes('female');
-      const hasBoth = (hasMale && hasFemale) || (parents && parents.size >= 2);
-
-      if (!hasBoth) {
-        if (!p.parents_next_step || p.parents_next_step.trim().length === 0) {
-          warn(
-            filePath,
-            'parents_next_step',
-            `Antenato diretto (${nameOf(pid)}) privo di genitori documentati, ma senza parents_next_step: compilare le istruzioni di ricerca per la tessera '?' dell'albero.`
-          );
-        }
-      }
-    }
+  for (const pid of directAncestors) {
+    const entry = index.people.get(pid);
+    if (!entry || isRestricted(pid) || hasNextStep(entry.data)) continue;
+    const missing = missingOf(pid);
+    if (!missing) continue;
+    const what = missing === 'both' ? 'padre e madre' : missing === 'father' ? 'il padre' : 'la madre';
+    warn(
+      entry.filePath,
+      'parents_next_step',
+      `Antenato diretto (${nameOf(pid)}) senza ${what} e senza parents_next_step: indica come cercarli, il testo compare sul segnaposto "?" dell'albero.`
+    );
   }
 
   // ---- Record che nessuno richiama ----

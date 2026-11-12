@@ -2,8 +2,6 @@ export interface ValidationError {
   filePath: string;
   field: string;
   message: string;
-  /** Se true, viene mostrato come [WARN] anche in modalità --strict senza bloccare il comando. */
-  nonBlocking?: boolean;
 }
 
 export interface DatasetIndex {

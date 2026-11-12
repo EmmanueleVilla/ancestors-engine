@@ -105,6 +105,7 @@ export function main(argv: string[] = process.argv.slice(2)): number {
     case 'validate':
       return runValidateCommand({
         dataDir: opts.dataDir,
+        configPath: opts.configPath,
         strict: opts.strict,
         verbose: opts.verbose,
         silent: opts.silent,

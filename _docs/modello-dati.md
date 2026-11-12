@@ -50,7 +50,7 @@ Lo schema conserva una sola conclusione per evento. Le asserzioni in conflitto r
 
 ## Campi speciali
 
-- `parents_next_step` (persona): cosa serve per trovare i genitori. L'albero lo mostra sulla scheda "?".
+- `parents_next_step` (persona): cosa serve per trovare i genitori. L'albero lo mostra sulla scheda "?", la scheda persona quando ha meno di due genitori. Con `tree.root_id` configurato, il controllo avvisa se un antenato diretto della radice (o del coniuge con cui ha figli) non ha padre o madre e non ha questo campo. Avvisa anche se il campo c'è ma il sito non lo mostra: genitori già collegati o persona riservata.
 - `unrecorded_children` (famiglia): figli che sappiamo esistere ma che non inseriamo come persone.
 - `tags: [scollegato]` (persona): la persona è volutamente fuori dall'albero, perché nessun atto prova il legame. Senza questo tag, il controllo avvisa se la persona non è in nessuna famiglia.
 - `tags: [conoscenza_diretta]` (persona): la fonte è la conoscenza diretta della famiglia, di solito per le generazioni viventi. Senza questo tag e senza citazioni, il controllo avvisa su persone, famiglie, eventi, relazioni e legami genitore-figlio senza fonti.
@@ -63,4 +63,4 @@ Non usare `conoscenza_diretta` per un antenato. Per un antenato collega la citaz
 ## Dopo ogni modifica
 
 1. Esegui `npm run check` nell'archivio.
-2. Correggi tutti gli errori. Leggi anche gli avvisi su date e collegamenti.
+2. Correggi tutti gli errori. Leggi anche gli avvisi su date e collegamenti: con `--strict` ogni avviso blocca, compresi i legami genitore-figlio senza fonti.

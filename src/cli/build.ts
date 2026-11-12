@@ -36,8 +36,16 @@ export function runBuildCommand(options: BuildCliOptions): number {
     console.log(`       Profile: ${profile}`);
   }
 
-  // 1. Validate dataset
-  const validation = loadAndValidateDataset(dataDir);
+  // 1. Configurazione dell'archivio (serve anche al validatore: radice dell'albero)
+  const configResult = loadArchiveConfig(configPath);
+  if (configResult.error) {
+    if (!silent) console.error(`\n[ERROR] Build halted: configurazione non valida (${configPath}): ${configResult.error}`);
+    return 1;
+  }
+  const config = configResult.config;
+
+  // 2. Validate dataset
+  const validation = loadAndValidateDataset(dataDir, { rootId: config.tree.root_id });
   if (!validation.valid || !validation.dataset) {
     if (!silent) {
       console.error(`\n[ERROR] Build halted: Dataset validation failed with ${validation.errors.length} error(s):`);
@@ -57,7 +65,7 @@ export function runBuildCommand(options: BuildCliOptions): number {
     if (!silent) console.warn(`[WARN] ${validation.warnings.length} anomalie nei dati (dettagli con 'npm run validate').`);
   }
 
-  // 2. Check that all referenced media files exist in assetsDir
+  // 3. Check that all referenced media files exist in assetsDir
   // I percorsi dei media sono relativi alla radice dell'archivio (la cartella che contiene data/).
   const archiveRoot = path.dirname(dataDir);
   const missingMedia = findMissingMedia(validation.dataset.media, archiveRoot);
@@ -71,13 +79,6 @@ export function runBuildCommand(options: BuildCliOptions): number {
     return 1;
   }
 
-  // 3. Configurazione dell'archivio
-  const configResult = loadArchiveConfig(configPath);
-  if (configResult.error) {
-    if (!silent) console.error(`\n[ERROR] Build halted: configurazione non valida (${configPath}): ${configResult.error}`);
-    return 1;
-  }
-  const config = configResult.config;
 
   // 4. Apply privacy filter based on profile
   const isPublic = profile === 'public';
