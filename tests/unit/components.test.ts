@@ -5,6 +5,7 @@ import { RelationshipSchema } from '../../src/model/relationship.js';
 import { NormalizedDataset } from '../../src/validator/index.js';
 import { renderTreeNode, buildAncestorBranch } from '../../src/generator/components/tree.js';
 import { renderPersonPage } from '../../src/generator/pages/person.js';
+import { renderTreePage } from '../../src/generator/pages/tree.js';
 
 describe('Tree and Person Components', () => {
   const p1 = PersonSchema.parse({ id: 'P1', given_names: 'John', surname: 'Doe' });
@@ -49,5 +50,13 @@ describe('Tree and Person Components', () => {
     expect(html).toContain('Child Doe');
     expect(html).toContain('href="../people/P1.html"');
     expect(html).toContain('href="../people/P2.html"');
+  });
+
+  it('renders tree page with full screen canvas controls and wide layout', () => {
+    const html = renderTreePage(p3, dataset, '../');
+    expect(html).toContain('class="scrivania scrivania-larga"');
+    expect(html).toContain('class="serie-0 larga"');
+    expect(html).toContain('id="tree-canvas"');
+    expect(html).toContain('id="btn-fullscreen"');
   });
 });

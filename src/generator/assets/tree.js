@@ -259,8 +259,14 @@ function initFamilyTree() {
     const dpr = window.devicePixelRatio || 1;
     const w = rect.width > 0 ? rect.width : 1200;
     const h = rect.height > 0 ? rect.height : 680;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
+    const nextW = Math.round(w * dpr);
+    const nextH = Math.round(h * dpr);
+    if (canvas.width === nextW && canvas.height === nextH) {
+      render();
+      return;
+    }
+    canvas.width = nextW;
+    canvas.height = nextH;
     ctx.scale(dpr, dpr);
     render();
   }
@@ -988,7 +994,9 @@ function initFamilyTree() {
   const btnFitAll = document.getElementById('btn-fit-all');
   const btnReset = document.getElementById('btn-reset-zoom');
   const btnFocus = document.getElementById('btn-focus-person');
+  const btnFullscreen = document.getElementById('btn-fullscreen');
   const btnExport = document.getElementById('btn-export-png');
+  const treeSection = document.getElementById('tree-canvas-section');
 
   if (btnZoomIn) {
     btnZoomIn.addEventListener('click', () => {
@@ -1028,6 +1036,42 @@ function initFamilyTree() {
 
   if (btnFocus) {
     btnFocus.addEventListener('click', centerOnFocusNode);
+  }
+
+  function updateFullscreenBtn() {
+    if (!btnFullscreen) return;
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btnFullscreen.textContent = isFs ? 'Esci da schermo intero' : 'Schermo intero';
+    btnFullscreen.setAttribute('title', isFs ? 'Esci da schermo intero' : 'Schermo intero');
+    btnFullscreen.setAttribute('aria-label', isFs ? 'Esci da schermo intero' : 'Schermo intero');
+  }
+
+  if (btnFullscreen && treeSection) {
+    btnFullscreen.addEventListener('click', () => {
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!isFs) {
+        if (treeSection.requestFullscreen) {
+          treeSection.requestFullscreen().catch(() => {});
+        } else if (treeSection.webkitRequestFullscreen) {
+          treeSection.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      updateFullscreenBtn();
+      resizeCanvas();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      updateFullscreenBtn();
+      resizeCanvas();
+    });
   }
 
   if (btnExport) {
@@ -1153,6 +1197,12 @@ function initFamilyTree() {
   window.addEventListener('resize', () => {
     resizeCanvas();
   });
+  if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
+    const ro = new ResizeObserver(() => {
+      resizeCanvas();
+    });
+    ro.observe(canvas.parentElement);
+  }
 
   function escapeHtml(str) {
     if (!str) return '';

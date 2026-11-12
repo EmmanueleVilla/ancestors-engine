@@ -55,6 +55,7 @@ export function renderTreePage(
         <button type="button" id="btn-zoom-out" class="btn btn-sm" title="Rimpicciolisci" aria-label="Rimpicciolisci">−</button>
         <button type="button" id="btn-fit-all" class="btn btn-sm" title="Mostra tutto l'albero">Tutto</button>
         <button type="button" id="btn-reset-zoom" class="btn btn-sm" title="Torna alla persona al centro">Centra</button>
+        <button type="button" id="btn-fullscreen" class="btn btn-sm" title="Schermo intero" aria-label="Schermo intero">Schermo intero</button>
       </div>
       <button type="button" id="btn-export-png" class="btn btn-sm btn-primary" title="Salva l'albero come immagine">Salva immagine</button>
     </div>
