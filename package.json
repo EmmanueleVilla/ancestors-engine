@@ -1,6 +1,6 @@
 {
   "name": "ancestors-engine",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Engine per archivi genealogici in YAML: validatore, paradati, registro delle ricerche e generatore di siti statici con profilo pubblico protetto",
   "license": "MIT",
   "author": "Emmanuele Villa",

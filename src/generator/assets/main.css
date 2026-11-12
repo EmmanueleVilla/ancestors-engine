@@ -229,12 +229,6 @@ code {
   padding-left: clamp(0.75rem, 2vw, 2rem);
   padding-right: clamp(0.75rem, 2vw, 2rem);
 }
-body.larga .barra-inner {
-  max-width: none;
-  width: 100%;
-  padding-left: clamp(0.75rem, 2vw, 2rem);
-  padding-right: clamp(0.75rem, 2vw, 2rem);
-}
 
 .piede {
   border-top: 1px solid var(--riga);
@@ -1170,7 +1164,6 @@ h1, h2, h3, h4 { text-wrap: balance; }
   .canvas-toolbar { margin-bottom: 0.5rem; }
   .foglio { padding: 1.4rem 1rem 2rem; }
   .scrivania-larga .foglio { padding-top: 0.5rem; padding-left: 0.75rem; padding-right: 0.75rem; }
-  body.larga .barra-inner { padding-left: 0.75rem; padding-right: 0.75rem; }
   .intestazione { grid-template-columns: 1fr; }
   .cartellino { min-width: 0; }
   .registro > li, .schedario > li { grid-template-columns: 1fr; gap: 0.3rem; }

@@ -27,7 +27,7 @@ The example (`example/`) is an invented family.
 ## Use the engine in an archive
 
 ```json
-"dependencies": { "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.2.0" },
+"dependencies": { "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.2.1" },
 "scripts": {
   "check": "ancestors validate --strict",
   "site": "ancestors build --profile private",
