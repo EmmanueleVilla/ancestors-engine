@@ -25,9 +25,9 @@ function event(id: string, type: string, personId: string, year: number, precisi
 
 /** Famiglia base: padre 1850, madre 1855, figlio 1880. Ogni test la rompe in un punto. */
 function baseFamily() {
-  person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [decesso_ignoto]\n');
-  person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [decesso_ignoto]\n');
-  person('KID', 'sex: male\nbirth_event_id: E_KID_B\ntags: [decesso_ignoto]\n');
+  person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\n');
+  person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\n');
+  person('KID', 'sex: male\nbirth_event_id: E_KID_B\n');
   event('E_DAD_B', 'birth', 'DAD', 1850);
   event('E_MOM_B', 'birth', 'MOM', 1855);
   event('E_KID_B', 'birth', 'KID', 1880);
@@ -147,8 +147,8 @@ describe('Avvisi di coerenza', () => {
     // Il figlio e il suo evento hanno una citazione: niente avviso per loro.
     expect(loadAndValidateDataset(dir).warnings.filter((w) => w.filePath.includes('KID'))).toEqual([]);
     // Genitori noti per conoscenza diretta: niente avvisi né per loro, né per gli eventi, né per la famiglia.
-    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [conoscenza_diretta, decesso_ignoto]\n');
-    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [conoscenza_diretta, decesso_ignoto]\n');
+    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [conoscenza_diretta]\n');
+    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [conoscenza_diretta]\n');
     expect(messages()).toEqual([]);
   });
 
@@ -432,7 +432,7 @@ describe('Nuovi controlli di qualità e coerenza genealogica', () => {
     write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nstart_event_id: E_MAR\nend_event_id: E_WRONG\n');
     write('events/E_MAR.yml', 'id: E_MAR\nevent_type: marriage\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1870\n');
     write('events/E_WRONG.yml', 'id: E_WRONG\nevent_type: birth\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1875\n');
-    expect(messages()).toContainEqual(expect.stringMatching(/L'evento 'E_WRONG' è di tipo 'birth', atteso divorce\/annulment\/separation/));
+    expect(messages()).toContainEqual(expect.stringMatching(/L'evento 'E_WRONG' è di tipo 'birth', atteso divorce\/separation/));
   });
 
   it('spostamento a velocità impossibile prima del 1920 genera avviso', () => {

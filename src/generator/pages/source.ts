@@ -2,7 +2,7 @@ import { escapeHtml } from '../components/base.js';
 import { renderLayout } from '../components/layout.js';
 import { Source } from '../../model/source.js';
 import { NormalizedDataset } from '../../validator/index.js';
-import { eventLabel, isLiving, nameOf, personLink, renderBreadcrumbs, sourceTypeLabel } from '../components/fascicolo.js';
+import { eventLabel, nameOf, personLink, renderBreadcrumbs, sourceTypeLabel } from '../components/fascicolo.js';
 import { isPdfMedia } from '../../model/media.js';
 
 const RELIABILITY: Record<string, string> = { high: 'alta', moderate: 'media', low: 'bassa', uncertain: 'incerta' };
@@ -51,11 +51,7 @@ export function renderSourcePage(
         .join('')}</ol>`
     : '<p class="muto">Nessuna citazione collegata a questa fonte.</p>';
 
-  const media = [...dataset.media.values()].filter((m) => {
-    if (m.source_id !== source.id) return false;
-    if (m.person_ids?.some((pid) => isLiving(dataset.people.get(pid)))) return false;
-    return true;
-  });
+  const media = [...dataset.media.values()].filter((m) => m.source_id === source.id);
   const mediaHtml = media.length
     ? `
     <section class="sezione" aria-labelledby="media-titolo">

@@ -68,7 +68,7 @@ const EXPECTED_EVENT_TYPES: Record<string, string[]> = {
   death_event_id: ['death'],
   burial_event_id: ['burial'],
   start_event_id: ['marriage', 'civil_union', 'partnership'],
-  end_event_id: ['divorce', 'annulment', 'separation'],
+  end_event_id: ['divorce', 'separation'],
 };
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -101,13 +101,7 @@ const DETACHED_TAG = 'scollegato';
 const POSTHUMOUS_EVENT_TYPES = new Set([
   'death',
   'burial',
-  'cremation',
   'probate',
-  'will',
-  'estate',
-  'inventory',
-  'memorial',
-  'obituary',
 ]);
 
 /**

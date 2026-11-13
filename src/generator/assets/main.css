@@ -871,7 +871,7 @@ h1, h2, h3, h4 { text-wrap: balance; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .tree-head .page-title { font-size: clamp(1.9rem, 4vw, 3rem); }
 
-.breadcrumbs, .breadcrumb, .briciole {
+.breadcrumbs {
   font-family: var(--f-dattilo);
   font-size: 0.8rem;
   color: var(--grafite);
@@ -880,8 +880,8 @@ h1, h2, h3, h4 { text-wrap: balance; }
   list-style: none;
   padding: 0;
 }
-.breadcrumbs a, .breadcrumb a, .briciole a { color: var(--grafite); }
-.breadcrumbs .sep, .breadcrumb .sep, .briciole .sep, .briciole .separatore { margin: 0 0.4rem; color: var(--riga-forte); }
+.breadcrumbs a { color: var(--grafite); }
+.breadcrumbs .sep { margin: 0 0.4rem; color: var(--riga-forte); }
 
 .canvas-toolbar {
   display: flex;
