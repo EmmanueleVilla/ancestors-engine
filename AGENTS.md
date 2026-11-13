@@ -4,6 +4,49 @@ Engine per archivi genealogici in YAML: schemi, validatore, filtro privacy e gen
 
 Lingua: scrivi in italiano, con gli accenti corretti.
 
+
+# Code Reuse and Architecture
+
+## Mandatory code reuse
+
+Before implementing any new method, function, class, component, or utility:
+
+1. Search the entire codebase for existing implementations of the same or similar functionality.
+2. Inspect existing APIs, extensions, utilities, repositories, services, and shared modules.
+3. Identify whether existing code can be reused, extended, or composed.
+4. Prefer reusing existing implementations over creating new ones.
+
+## Avoid duplication
+
+- NEVER create a method that duplicates existing functionality.
+- NEVER reimplement an algorithm or business rule already present in the codebase.
+- NEVER introduce a new utility when an existing one can be extended.
+- Prefer existing abstractions and established architectural patterns.
+- Avoid introducing unnecessary wrappers around existing methods.
+- Do not duplicate logic across platforms or modules when shared code already exists.
+
+## Before creating new code
+
+If no suitable implementation exists:
+- Explain why existing implementations are insufficient.
+- Consider whether the existing abstraction should be extended.
+- Only then introduce new code.
+
+## Refactoring
+
+- Do not replace existing implementations just because a new implementation seems cleaner.
+- Preserve existing behavior and API contracts.
+- Avoid unrelated refactoring.
+
+## Verification
+
+Before considering a task complete:
+- Check for duplicated functionality introduced by your changes.
+- Verify that existing methods are reused wherever appropriate.
+- Report which existing implementations were reused.
+- Explicitly justify any newly introduced methods that overlap with existing functionality.
+
+
 ## Comandi
 
 - `npm test`: esegue i test (Vitest).
