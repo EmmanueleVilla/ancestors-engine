@@ -4,11 +4,15 @@ import { fileURLToPath } from 'node:url';
 import { runValidateCommand } from './validate.js';
 import { runBuildCommand } from './build.js';
 import { runExportCommand } from './export.js';
+import { runInitCommand } from './init.js';
 import { BuildProfile } from '../config/index.js';
 
 function parseArgs(args: string[]) {
   const parsed: {
     command?: string;
+    targetDir?: string;
+    name?: string;
+    force?: boolean;
     dataDir?: string;
     assetsDir?: string;
     outDir?: string;
@@ -25,6 +29,10 @@ function parseArgs(args: string[]) {
   if (args.length > 0 && !args[0].startsWith('-')) {
     parsed.command = args[0];
     i = 1;
+    if (parsed.command === 'init' && i < args.length && !args[i].startsWith('-')) {
+      parsed.targetDir = args[i];
+      i++;
+    }
   }
 
   for (; i < args.length; i++) {
@@ -35,6 +43,10 @@ function parseArgs(args: string[]) {
       parsed.version = true;
     } else if (arg === '--strict') {
       parsed.strict = true;
+    } else if (arg === '--force') {
+      parsed.force = true;
+    } else if (arg === '--name' || arg === '-n') {
+      parsed.name = args[++i];
     } else if (arg === '--verbose') {
       parsed.verbose = true;
     } else if (arg === '--silent') {
@@ -69,6 +81,7 @@ Commands:
   validate               Validate schemas, referential integrity, and graph acyclicity
   build                  Generate static multi-page website and search index
   export                 Export the public-profile dataset as JSON (living people masked)
+  init [dir]             Initialize a new archive repository with standard directories and templates
 
 Options:
   -d, --data-dir <path>   Path to YAML data directory (default: ./data)
@@ -76,6 +89,8 @@ Options:
   -o, --out <path>        Target directory for static build (default: ./dist)
   -c, --config <path>     Archive configuration file (default: ./archivio.config.yml)
   -p, --profile <mode>    Build profile: public (default) or private
+  -n, --name <name>       Archive / family name for init (default: Famiglia)
+      --force            Overwrite existing files during init
       --strict           Treat non-critical warnings as build failures
       --verbose          Show detailed progress and entity statistics
       --silent           Suppress non-error output
@@ -83,6 +98,7 @@ Options:
   -h, --help             Display this help message
 
 Examples:
+  ancestors init ./mio-archivio --name "Rossi"
   ancestors validate --data-dir ./data
   ancestors build --profile public --out ./dist
 `);
@@ -129,6 +145,13 @@ export function main(argv: string[] = process.argv.slice(2)): number {
         outDir: opts.outDir,
         configPath: opts.configPath,
         silent: opts.silent,
+      });
+
+    case 'init':
+      return runInitCommand({
+        targetDir: opts.targetDir || opts.outDir,
+        name: opts.name,
+        force: opts.force,
       });
 
     default:
