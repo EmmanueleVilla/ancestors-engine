@@ -26,7 +26,7 @@ Dopo l'inizializzazione:
 
 1. Crea un repository privato. Non renderlo mai pubblico: contiene dati di persone vive.
 2. Copia `templates/` dell'engine nella radice del nuovo repository. Rinomina `CLAUDE.md` e `package.json` se servono.
-3. In `package.json` scegli la versione dell'engine: `"ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.3.0"`.
+3. In `package.json` scegli la versione dell'engine: `"ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.4.0"`.
 4. Esegui `npm install`.
 5. Compila `archivio.config.yml`: titolo, persona radice, chiave degli pseudonimi (vedi [configurazione.md](configurazione.md)).
 6. Crea `data/` con le cartelle del [modello dei dati](modello-dati.md) e un `data/research/registro_ricerche.yml` con `searches: []`.

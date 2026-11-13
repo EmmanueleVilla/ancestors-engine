@@ -67,7 +67,7 @@ describe('CLI Init Command', () => {
     const pkgContent = fs.readFileSync(path.join(tempDir, 'package.json'), 'utf-8');
     const pkg = JSON.parse(pkgContent);
     expect(pkg.name).toBe('archivio-rossi');
-    expect(pkg.dependencies['ancestors-engine']).toBe('github:EmmanueleVilla/ancestors-engine#v1.3.0');
+    expect(pkg.dependencies['ancestors-engine']).toBe('github:EmmanueleVilla/ancestors-engine#v1.4.0');
 
     const claudeContent = fs.readFileSync(path.join(tempDir, 'CLAUDE.md'), 'utf-8');
     expect(claudeContent).toContain('Archivio Rossi');
@@ -85,7 +85,7 @@ describe('CLI Init Command', () => {
     }
   });
 
-  it('generates fallback package.json pointing to v1.3.0 when templates are missing', () => {
+  it('generates fallback package.json pointing to v1.4.0 when templates are missing', () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ancestors-init-fallback-'));
     const emptyTemplatesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'empty-templates-'));
 
@@ -101,7 +101,7 @@ describe('CLI Init Command', () => {
       const pkgContent = fs.readFileSync(path.join(tempDir, 'package.json'), 'utf-8');
       const pkg = JSON.parse(pkgContent);
       expect(pkg.name).toBe('archivio-bianchi');
-      expect(pkg.dependencies['ancestors-engine']).toBe('github:EmmanueleVilla/ancestors-engine#v1.3.0');
+      expect(pkg.dependencies['ancestors-engine']).toBe('github:EmmanueleVilla/ancestors-engine#v1.4.0');
     } finally {
       fs.rmSync(emptyTemplatesDir, { recursive: true, force: true });
     }
