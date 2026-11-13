@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "skills": {
+    "code-refactoring-refactor-clean": {
+      "source": "0xzahed/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-refactoring-refactor-clean/SKILL.md",
+      "computedHash": "43b7d40df85ce5eae751168457d6f37988a7a88a165928361d3f81f73c3fe66c"
+    },
+    "code-review-ai-ai-review": {
+      "source": "0xzahed/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-review-ai-ai-review/SKILL.md",
+      "computedHash": "bf32ba673182005382b25354c0872cd99e90d539335e104fdeb486384e1747a4"
+    },
+    "codebase-cleanup-tech-debt": {
+      "source": "0xzahed/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/codebase-cleanup-tech-debt/SKILL.md",
+      "computedHash": "dc55eb7fdb64ce69db881142c7aa07c76cb6a5f5ee14b2cc6bec595e60930801"
+    }
+  }
+}
