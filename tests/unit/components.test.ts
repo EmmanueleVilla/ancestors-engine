@@ -6,6 +6,9 @@ import { NormalizedDataset } from '../../src/validator/index.js';
 import { renderTreeNode, buildAncestorBranch } from '../../src/generator/components/tree.js';
 import { renderPersonPage } from '../../src/generator/pages/person.js';
 import { renderTreePage } from '../../src/generator/pages/tree.js';
+import { renderDocument, safeJsonLd } from '../../src/generator/components/base.js';
+import { renderSurnamesIndexPage } from '../../src/generator/pages/surnames.js';
+import { EventSchema } from '../../src/model/event.js';
 
 describe('Tree and Person Components', () => {
   const p1 = PersonSchema.parse({ id: 'P1', given_names: 'John', surname: 'Doe' });
@@ -58,5 +61,54 @@ describe('Tree and Person Components', () => {
     expect(html).toContain('class="serie-0 larga"');
     expect(html).toContain('id="tree-canvas"');
     expect(html).toContain('id="btn-fullscreen"');
+  });
+
+  it('safely escapes < characters in JSON-LD output', () => {
+    const payload = {
+      '@context': 'https://schema.org',
+      description: 'Test <script>alert("xss")</script> & other <tags>',
+    };
+    const escaped = safeJsonLd(payload);
+    expect(escaped).not.toContain('<script>');
+    expect(escaped).not.toContain('<tags>');
+    expect(escaped).toContain('\\u003cscript>');
+    expect(escaped).toContain('\\u003ctags>');
+
+    const doc = renderDocument({
+      title: 'Test',
+      bodyContent: '<p>Hi</p>',
+      jsonLd: payload,
+    });
+    expect(doc).not.toContain('<script type="application/ld+json">\n{\n  "@context": "https://schema.org",\n  "description": "Test <script>');
+    expect(doc).toContain('\\u003cscript>alert');
+  });
+
+  it('excludes living people and [Living] group from surname time span and top places', () => {
+    const livingPerson = PersonSchema.parse({
+      id: 'L1',
+      given_names: 'Living',
+      surname: 'Rossi',
+      privacy: 'living-person restricted',
+    });
+    const livingEvt = EventSchema.parse({
+      id: 'E_LIV',
+      person_ids: ['L1'],
+      event_type: 'birth',
+      date: { year: 2005, precision: 'exact' },
+      place_id: 'PLC_SECRET',
+    });
+
+    const surnDataset: NormalizedDataset = {
+      ...dataset,
+      people: new Map([['L1', livingPerson]]),
+      events: new Map([['E_LIV', livingEvt]]),
+    };
+
+    const html = renderSurnamesIndexPage(surnDataset, '../');
+    // Non deve mostrare 2005 né PLC_SECRET nella scheda del gruppo [Living]
+    expect(html).toContain('[Living]');
+    expect(html).not.toContain('Attestazione:');
+    expect(html).not.toContain('2005');
+    expect(html).not.toContain('PLC_SECRET');
   });
 });

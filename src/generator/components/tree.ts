@@ -55,7 +55,7 @@ export function buildAncestorBranch(
     .join('');
 
   return `
-  <div class="tree-branch" style="display: flex; align-items: center;">
+  <div class="tree-branch">
     ${nodeHtml}
     <div class="rami">
       ${parentsHtml}
@@ -89,7 +89,7 @@ export function buildDescendantBranch(
     .join('');
 
   return `
-  <div class="tree-branch" style="display: flex; align-items: center;">
+  <div class="tree-branch">
     ${nodeHtml}
     <div class="rami">
       ${childrenHtml}

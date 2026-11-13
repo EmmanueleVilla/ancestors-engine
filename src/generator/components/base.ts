@@ -25,6 +25,10 @@ export function html(strings: TemplateStringsArray, ...values: any[]): string {
   }, '');
 }
 
+export function safeJsonLd(data: object | object[]): string {
+  return JSON.stringify(data, null, 2).replace(/</g, '\\u003c');
+}
+
 export interface DocumentOptions {
   title: string;
   description?: string;
@@ -40,7 +44,7 @@ export function renderDocument(options: DocumentOptions): string {
   const site = getSiteSettings();
   const desc = options.description || site.description;
   const jsonLdScript = options.jsonLd
-    ? `\n  <script type="application/ld+json">\n${JSON.stringify(options.jsonLd, null, 2)}\n  </script>`
+    ? `\n  <script type="application/ld+json">\n${safeJsonLd(options.jsonLd)}\n  </script>`
     : '';
 
   return `<!DOCTYPE html>

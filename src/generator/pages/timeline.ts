@@ -18,7 +18,7 @@ export function renderTimelinePage(dataset: NormalizedDataset, rootRelPath: stri
   const blocks = [...byDecade.entries()]
     .map(([decade, list]) => `
     <section class="lettera" id="anni-${escapeHtml(decade)}">
-      <div class="lettera-segno" aria-hidden="true" style="font-size:2.2rem">${escapeHtml(decade)}</div>
+      <div class="lettera-segno decennio-segno" aria-hidden="true">${escapeHtml(decade)}</div>
       <ol class="registro">
         ${list
           .map((e) => {

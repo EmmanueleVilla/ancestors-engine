@@ -3,7 +3,7 @@ import { renderLayout } from '../components/layout.js';
 import { Place } from '../../model/place.js';
 import { formatDate } from '../../model/date.js';
 import { NormalizedDataset } from '../../validator/index.js';
-import { dataIt, eventLabel, personLink } from '../components/fascicolo.js';
+import { dataIt, eventLabel, personLink, renderBreadcrumbs } from '../components/fascicolo.js';
 import { placeTypeLabel } from './places.js';
 
 export function renderPlacePage(
@@ -41,7 +41,7 @@ export function renderPlacePage(
   const area = [place.administrative_area, place.country].filter(Boolean).join(', ');
 
   const geoBox = typeof place.latitude === 'number' && typeof place.longitude === 'number'
-    ? `<div class="coordinate-box" style="margin-top:0.6rem;font-size:0.9em;color:#555">
+    ? `<div class="coordinate-box">
          <span>Lat. ${place.latitude.toFixed(4)}, Lon. ${place.longitude.toFixed(4)}</span> ·
          <a href="https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=14/${place.latitude}/${place.longitude}" target="_blank" rel="noopener">Visualizza su OpenStreetMap</a>
        </div>`
@@ -63,15 +63,15 @@ export function renderPlacePage(
         .join('')}</ol>`
     : '<p class="muto">Nessun evento registrato in questo luogo.</p>';
 
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: 'Luoghi', href: `${rootRelPath}places/index.html` },
+    ...(parent ? [{ label: parent.name, href: `${rootRelPath}places/${parent.id}.html` }] : []),
+    { label: place.name },
+  ]);
+
   const content = `
-  <nav class="breadcrumb" aria-label="Percorso">
-    <ol>
-      <li><a href="${rootRelPath}index.html">Archivio</a></li>
-      <li><a href="${rootRelPath}places/index.html">Luoghi</a></li>
-      ${parent ? `<li><a href="${rootRelPath}places/${parent.id}.html">${escapeHtml(parent.name)}</a></li>` : ''}
-      <li aria-current="page">${escapeHtml(place.name)}</li>
-    </ol>
-  </nav>
+  ${breadcrumb}
 
   <header class="intestazione">
     <div>
@@ -85,11 +85,11 @@ export function renderPlacePage(
 
   <section class="sezione">
     <h2>Persone <span class="dattilo muto">${allPeopleCount}</span></h2>
-    ${bornHere.size ? `<div class="sottosezione-muto">Nati a ${escapeHtml(place.name)}:</div><ul class="nomi" style="margin-bottom:1rem">${[...bornHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
-    ${diedHere.size ? `<div class="sottosezione-muto">Deceduti o sepolti a ${escapeHtml(place.name)}:</div><ul class="nomi" style="margin-bottom:1rem">${[...diedHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
-    ${marriedHere.size ? `<div class="sottosezione-muto">Uniti in matrimonio a ${escapeHtml(place.name)}:</div><ul class="nomi" style="margin-bottom:1rem">${[...marriedHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    ${bornHere.size ? `<div class="sottosezione-muto">Nati a ${escapeHtml(place.name)}:</div><ul class="nomi">${[...bornHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    ${diedHere.size ? `<div class="sottosezione-muto">Deceduti o sepolti a ${escapeHtml(place.name)}:</div><ul class="nomi">${[...diedHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    ${marriedHere.size ? `<div class="sottosezione-muto">Uniti in matrimonio a ${escapeHtml(place.name)}:</div><ul class="nomi">${[...marriedHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
     ${otherHere.size ? `<div class="sottosezione-muto">Altri collegamenti:</div><ul class="nomi">${[...otherHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
-    {!allPeopleCount ? '<p class="muto">Nessuna persona collegata a questo luogo.</p>' : ''}
+    ${!allPeopleCount ? '<p class="muto">Nessuna persona collegata a questo luogo.</p>' : ''}
   </section>
 
   <section class="sezione">

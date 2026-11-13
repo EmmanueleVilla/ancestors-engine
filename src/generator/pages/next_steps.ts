@@ -1,5 +1,6 @@
 import { escapeHtml } from '../components/base.js';
 import { renderLayout } from '../components/layout.js';
+import { renderBreadcrumbs } from '../components/fascicolo.js';
 
 /** Auto-link identifiers in text (people, families, sources, places). */
 function autoLinkIdentifiers(text: string, rootRelPath: string): string {
@@ -84,7 +85,10 @@ export function renderSimpleMarkdown(md: string, rootRelPath: string = './'): st
 }
 
 export function renderNextStepsPage(markdown: string, rootRelPath: string = './'): string {
-  const breadcrumb = `<nav class="briciole" aria-label="Percorso"><a href="${rootRelPath}index.html">Archivio</a> <span class="separatore">/</span> <span>Prossimi passi</span></nav>`;
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: 'Prossimi passi' },
+  ]);
   const content = `
   <div class="next-steps">
     ${breadcrumb}

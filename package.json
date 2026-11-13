@@ -21,7 +21,7 @@
     "templates",
     "scripts",
     "example",
-    ".agents"
+    ".agents/skills/genealogy-crud-wizard"
   ],
   "engines": {
     "node": ">=20"

@@ -5,7 +5,8 @@ import { Person } from '../../model/person.js';
 import { formatDate } from '../../model/date.js';
 import { NormalizedDataset } from '../../validator/index.js';
 import { serieOf } from '../components/serie.js';
-import { computeAgeAtEvent, dataIt, eventLabel, nameOf, personLink, personSegnatura } from '../components/fascicolo.js';
+import { computeAgeAtEvent, dataIt, eventLabel, nameOf, personLink, personSegnatura, renderBreadcrumbs } from '../components/fascicolo.js';
+import { surnameAnchorId } from './surnames.js';
 
 const CONFIDENCE_IT: Record<string, string> = {
   probable: 'probabile',
@@ -88,7 +89,7 @@ export function renderPersonPage(
       <dt>Fratelli e sorelle</dt>
       <dd>
         ${fullSiblings.size > 0 ? `<ul>${[...fullSiblings].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
-        ${halfSiblings.size > 0 ? `<div class="muto" style="font-size:0.85em;margin-top:0.3rem">Fratellastri / sorellastre:</div><ul>${[...halfSiblings].map((id) => `<li>${personLink(id, dataset, rootRelPath)} <span class="badge">unilaterale</span></li>`).join('')}</ul>` : ''}
+        ${halfSiblings.size > 0 ? `<div class="legami-sottotitolo">Fratellastri / sorellastre:</div><ul>${[...halfSiblings].map((id) => `<li>${personLink(id, dataset, rootRelPath)} <span class="badge">unilaterale</span></li>`).join('')}</ul>` : ''}
       </dd>`
     : '';
 
@@ -189,15 +190,17 @@ export function renderPersonPage(
   const notes = !isLiving ? person.notes || [] : [];
   const nextStep = !isLiving && person.parents_next_step && parentRels.length < 2 ? person.parents_next_step : '';
 
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: 'Persone', href: `${rootRelPath}surnames/index.html` },
+    ...(person.surname && !isLiving
+      ? [{ label: person.surname, href: `${rootRelPath}surnames/index.html#${surnameAnchorId(person.surname)}` }]
+      : []),
+    { label: displayName },
+  ]);
+
   const content = `
-  <nav class="breadcrumb" aria-label="Percorso">
-    <ol>
-      <li><a href="${rootRelPath}index.html">Archivio</a></li>
-      <li><a href="${rootRelPath}surnames/index.html">Persone</a></li>
-      ${person.surname && !isLiving ? `<li><a href="${rootRelPath}surnames/index.html#cognome-${encodeURIComponent(person.surname.toLowerCase())}">${escapeHtml(person.surname)}</a></li>` : ''}
-      <li aria-current="page">${escapeHtml(displayName)}</li>
-    </ol>
-  </nav>
+  ${breadcrumb}
 
   <header class="intestazione">
     <div>
@@ -205,7 +208,7 @@ export function renderPersonPage(
       ${person.maiden_name && !isLiving ? `<p class="sottotitolo">nata ${escapeHtml(person.maiden_name)}</p>` : ''}
       ${person.alternative_names?.length && !isLiving ? `<p class="sottotitolo">detto anche ${person.alternative_names.map((n) => escapeHtml(n)).join(', ')}</p>` : ''}
       ${estremi ? `<p class="estremi">${estremi}</p>` : ''}
-      ${occupations ? `<p class="muto" style="margin-top:0.4rem">${escapeHtml(occupations)}</p>` : ''}
+      ${occupations ? `<p class="occupazioni">${escapeHtml(occupations)}</p>` : ''}
       <div class="intestazione-azioni">
         <a href="${rootRelPath}trees/${person.id}.html" class="btn btn-primary">Apri l'albero</a>
       </div>
@@ -216,7 +219,7 @@ export function renderPersonPage(
   ${!isLiving && person.biography ? `
   <section class="sezione">
     <h2>Biografia</h2>
-    <p style="white-space: pre-line">${escapeHtml(person.biography)}</p>
+    <div class="biografia"><p>${escapeHtml(person.biography)}</p></div>
   </section>` : ''}
 
   <section class="sezione" aria-labelledby="legami-titolo">
@@ -240,7 +243,7 @@ export function renderPersonPage(
   <section class="sezione" aria-labelledby="note-titolo">
     <h2 id="note-titolo">Note di ricerca</h2>
     ${notes.length ? `<ul>${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
-    ${nextStep ? `<div class="next-step-box" style="margin-top:1.25rem"><div class="next-step-title">Per trovare i genitori</div>${nextStep.split(/\n+/).filter(Boolean).map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>` : ''}
+    ${nextStep ? `<div class="next-step-box"><div class="next-step-title">Per trovare i genitori</div>${nextStep.split(/\n+/).filter(Boolean).map((p) => `<p>${escapeHtml(p)}</p>`).join('')}</div>` : ''}
   </section>` : ''}
   `;
 

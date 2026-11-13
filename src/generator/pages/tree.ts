@@ -4,6 +4,7 @@ import { Person, getPersonDisplayName } from '../../model/person.js';
 import { extractTreeGraphData, buildAncestorBranch, buildDescendantBranch } from '../components/tree.js';
 import { NormalizedDataset } from '../../validator/index.js';
 import { allSeries, serieOf } from '../components/serie.js';
+import { renderBreadcrumbs } from '../components/fascicolo.js';
 
 export interface TreeLayout {
   rootId?: string;
@@ -40,11 +41,15 @@ export function renderTreePage(
     .map((s) => `<span class="legend-chip"><span class="legend-swatch ${s.cls}"></span>${escapeHtml(s.name)}</span>`)
     .join('');
 
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: name, href: `${rootRelPath}people/${person.id}.html` },
+    { label: 'Albero' },
+  ]);
+
   const content = `
   <header class="tree-head">
-    <nav class="breadcrumbs" aria-label="Percorso">
-      <a href="${rootRelPath}index.html">Archivio</a><span class="sep">/</span><a href="${rootRelPath}people/${person.id}.html">${escapeHtml(name)}</a><span class="sep">/</span><span aria-current="page">Albero</span>
-    </nav>
+    ${breadcrumb}
     <h1 class="sr-only">Albero di ${escapeHtml(name)}</h1>
   </header>
 
@@ -137,12 +142,12 @@ export function renderTreePage(
   <details class="albero-accessibile no-print">
     <summary>Visualizzazione testuale accessibile (antenati e discendenti)</summary>
     <div class="albero-accessibile-contenuto">
-      <div style="margin-bottom: 1.5rem;">
-        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Antenati</h3>
+      <div class="albero-sezione">
+        <h3 class="albero-sezione-titolo">Antenati</h3>
         ${buildAncestorBranch(person.id, dataset, 0, 4, rootRelPath)}
       </div>
-      <div>
-        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Discendenti</h3>
+      <div class="albero-sezione">
+        <h3 class="albero-sezione-titolo">Discendenti</h3>
         ${buildDescendantBranch(person.id, dataset, 0, 3, rootRelPath)}
       </div>
     </div>

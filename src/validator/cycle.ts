@@ -88,14 +88,13 @@ export function detectKinshipCycles(relationships: Relationship[]): CycleDetecti
 }
 
 export function detectPlaceCycles(
-  places: Map<string, { data: Place }> | Map<string, Place>
+  places: Map<string, { data: Place }>
 ): CycleDetectionResult {
   // Grafo orientato: Luogo contenitore (parent_place_id) -> Luogo contenuto (id)
   const edges: [string, string][] = [];
   for (const [id, item] of places.entries()) {
-    const plc = 'data' in item ? (item as { data: Place }).data : (item as Place);
-    if (plc.parent_place_id && plc.parent_place_id !== id) {
-      edges.push([plc.parent_place_id, id]);
+    if (item.data.parent_place_id) {
+      edges.push([item.data.parent_place_id, id]);
     }
   }
   return detectGraphCycles(edges);

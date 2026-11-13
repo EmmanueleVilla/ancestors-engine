@@ -1,7 +1,6 @@
 import type { DateValue } from '../model/date.js';
 import type { DatasetIndex, ValidationError } from './reference.js';
 import { buildParentsOf, directAncestorsOf, isParentRelationship, missingParents, type LineageRelationship } from './lineage.js';
-import type { ResearchEntry } from '../model/research.js';
 
 /**
  * Controlli di coerenza "morbidi": non bloccano la build (salvo `--strict`),
@@ -91,8 +90,6 @@ export interface ExtraReferences {
   relationships?: LineageRelationship[];
   /** Radice dell'albero (`tree.root_id`): attiva i controlli sugli antenati diretti. */
   rootId?: string;
-  /** Voci del registro ricerche per controlli di coerenza esiti. */
-  researchEntries?: ResearchEntry[];
 }
 
 /** Persona vivente riservata: il sito non ne mostra i dettagli. */
@@ -101,8 +98,17 @@ const LIVING_RESTRICTED = 'living-person restricted';
 /** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
 const DETACHED_TAG = 'scollegato';
 
-/** Tag che dichiara una persona deceduta di cui non si possiede ancora l'atto di morte (spegne l'avviso >115 anni). */
-export const UNKNOWN_DEATH_TAG = 'decesso_ignoto';
+const POSTHUMOUS_EVENT_TYPES = new Set([
+  'death',
+  'burial',
+  'cremation',
+  'probate',
+  'will',
+  'estate',
+  'inventory',
+  'memorial',
+  'obituary',
+]);
 
 /**
  * Tag che dichiara la fonte di una persona: la conoscenza diretta del ricercatore o della famiglia
@@ -162,16 +168,13 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     }
 
     const currentYear = new Date().getFullYear();
-    if (!p.death_event_id && !p.burial_event_id && birth && currentYear - birth.max > 115 && !p.tags?.includes(UNKNOWN_DEATH_TAG)) {
-      warn(filePath, 'birth_event_id', `Persona nata oltre 115 anni fa (${nameOf(pid)}) senza evento di morte o sepoltura: verificare presunzione di decesso o aggiungere tag ${UNKNOWN_DEATH_TAG}.`);
-    }
 
     if (p.privacy === LIVING_RESTRICTED) {
       if (p.death_event_id || p.burial_event_id) {
         warn(filePath, 'privacy', `Persona con evento di morte/sepoltura (${nameOf(pid)}) ma marcata '${LIVING_RESTRICTED}'.`);
       }
-      if (birth && currentYear - birth.min > 110) {
-        warn(filePath, 'privacy', `Persona nata oltre 110 anni fa (${nameOf(pid)}) marcata '${LIVING_RESTRICTED}': non può essere considerata vivente.`);
+      if (birth && currentYear - birth.min > MAX_LIFESPAN) {
+        warn(filePath, 'privacy', `Persona nata oltre ${MAX_LIFESPAN} anni fa (${nameOf(pid)}) marcata '${LIVING_RESTRICTED}': non può essere considerata vivente.`);
       }
     }
 
@@ -193,13 +196,13 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
       const evt = index.events.get(eid)?.data;
       if (!evt) continue;
       const ed = eventDate(eid);
-      if (death && evt.event_type !== 'death' && evt.event_type !== 'burial' && evt.event_type !== 'probate') {
-        if (surelyAfter(ed, death)) {
+      if (death && !POSTHUMOUS_EVENT_TYPES.has(evt.event_type)) {
+        if (surelyAfter(ed, death, 0.05)) {
           warn(filePath, 'death_event_id', `L'evento '${eid}' di tipo '${evt.event_type}' si svolge dopo la morte di ${nameOf(pid)}.`);
         }
       }
       if (birth && evt.event_type !== 'birth' && evt.event_type !== 'baptism' && evt.event_type !== 'christening') {
-        if (surelyAfter(birth, ed)) {
+        if (surelyAfter(birth, ed, 0.05)) {
           warn(filePath, 'birth_event_id', `L'evento '${eid}' di tipo '${evt.event_type}' si svolge prima della nascita di ${nameOf(pid)}.`);
         }
       }
@@ -359,12 +362,15 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
       const f1 = sorted[i];
       const f2 = sorted[i + 1];
       const spouse1Death = f1.spouseId ? deathOf(f1.spouseId) : null;
-      const f1StillActive = (!spouse1Death || surelyAfter(spouse1Death, f2.start)) && (!f1.end || surelyAfter(f1.end, f2.start));
-      if (f1StillActive && surelyAfter(f2.start, f1.start)) {
+      // Segnala unione sovrapposta/bigamia solo se vi è prova esplicita che il primo coniuge
+      // fosse ancora in vita alla data delle seconde nozze e l'unione precedente non risulti sciolta.
+      const spouse1EvidentlyAlive = !!spouse1Death && surelyAfter(spouse1Death, f2.start);
+      const f1NotEnded = !f1.end || surelyAfter(f1.end, f2.start);
+      if (spouse1EvidentlyAlive && f1NotEnded && surelyAfter(f2.start, f1.start)) {
         warn(
           f2.filePath,
           'start_event_id',
-          `Possibile unione sovrapposta o bigamia per ${nameOf(pId)} tra la famiglia '${f1.famId}' e '${f2.famId}'.`
+          `Possibile unione sovrapposta o bigamia per ${nameOf(pId)} tra la famiglia '${f1.famId}' e '${f2.famId}': il primo coniuge (${nameOf(f1.spouseId!)}) risulta deceduto dopo l'inizio della seconda unione.`
         );
       }
     }
@@ -558,9 +564,6 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     }
   }
   for (const [cid, { data: cit, filePath }] of index.citations) {
-    if (!cit.page_or_folio && !cit.quoted_text && (!cit.notes || cit.notes.length === 0)) {
-      warn(filePath, 'id', `Citazione '${cid}' priva di coordinate minime (mancano page_or_folio, quoted_text e note).`);
-    }
     if (!referencedCitations.has(cid) && !cit.person_id && !cit.event_id && !cit.family_id && !cit.relationship_id) {
       warn(filePath, 'id', `Citazione non collegata a nessun record.`);
     }
@@ -571,21 +574,6 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
   for (const [mid, { data: med, filePath }] of index.media) {
     if (!referencedMedia.has(mid) && !med.person_ids?.length && !med.event_ids?.length && !med.source_id) {
       warn(filePath, 'id', `Media non collegato a nessun record.`);
-    }
-  }
-
-  for (const entry of extra.researchEntries ?? []) {
-    if (entry.outcome === 'found' && entry.references?.length) {
-      const anyRefFound = entry.references.some((refId) =>
-        index.people.has(refId) || index.families.has(refId) || index.events.has(refId) || index.sources.has(refId)
-      );
-      if (!anyRefFound) {
-        warn(
-          'data/research',
-          'outcome',
-          `Ricerca con esito 'found' (${entry.goal}) per ${entry.references.join(', ')} ma nessun dato associato risulta registrato nel dataset.`
-        );
-      }
     }
   }
 

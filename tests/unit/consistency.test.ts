@@ -350,7 +350,7 @@ describe('Nuovi controlli di qualità e coerenza genealogica', () => {
 
   it('intervallo intergenesico anomalo tra figli della stessa madre', () => {
     baseFamily();
-    person('KID2', 'sex: female\nbirth_event_id: E_KID2_B\ntags: [decesso_ignoto]\n');
+    person('KID2', 'sex: female\nbirth_event_id: E_KID2_B\n');
     write('events/E_KID_B.yml', 'id: E_KID_B\nevent_type: birth\nperson_ids: [KID]\ndate:\n  precision: exact\n  year: 1880\n  month: 1\n  day: 1\n');
     write('events/E_KID2_B.yml', 'id: E_KID2_B\nevent_type: birth\nperson_ids: [KID2]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
     write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID, KID2]\n');
@@ -359,11 +359,41 @@ describe('Nuovi controlli di qualità e coerenza genealogica', () => {
 
   it('gemelli nati lo stesso giorno: nessun avviso di intervallo anomalo', () => {
     baseFamily();
-    person('KID2', 'sex: female\nbirth_event_id: E_KID2_B\ntags: [decesso_ignoto]\n');
+    person('KID2', 'sex: female\nbirth_event_id: E_KID2_B\n');
     write('events/E_KID_B.yml', 'id: E_KID_B\nevent_type: birth\nperson_ids: [KID]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
     write('events/E_KID2_B.yml', 'id: E_KID2_B\nevent_type: birth\nperson_ids: [KID2]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
     write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID, KID2]\n');
     expect(messages().filter((m) => m.includes('Intervallo intergenesico'))).toEqual([]);
+  });
+
+  it('seconde nozze senza data di morte del primo coniuge non generano avviso di bigamia', () => {
+    baseFamily();
+    person('WIFE2', 'sex: female\n');
+    write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID]\nstart_event_id: E_MAR1\n');
+    write('families/F2.yml', 'id: F2\npartner_ids: [DAD, WIFE2]\nstart_event_id: E_MAR2\n');
+    write('events/E_MAR1.yml', 'id: E_MAR1\nevent_type: marriage\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1870\n');
+    write('events/E_MAR2.yml', 'id: E_MAR2\nevent_type: marriage\nfamily_id: F2\ndate:\n  precision: year_only\n  year: 1885\n');
+    expect(messages().filter((m) => m.includes('bigamia') || m.includes('sovrapposta'))).toEqual([]);
+  });
+
+  it('seconde nozze con primo coniuge deceduto dopo il secondo matrimonio generano avviso di bigamia', () => {
+    baseFamily();
+    person('WIFE2', 'sex: female\n');
+    person('MOM', 'sex: female\ndeath_event_id: E_MOM_D\n');
+    event('E_MOM_D', 'death', 'MOM', 1890); // MOM muore nel 1890
+    write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID]\nstart_event_id: E_MAR1\n');
+    write('families/F2.yml', 'id: F2\npartner_ids: [DAD, WIFE2]\nstart_event_id: E_MAR2\n');
+    write('events/E_MAR1.yml', 'id: E_MAR1\nevent_type: marriage\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1870\n');
+    write('events/E_MAR2.yml', 'id: E_MAR2\nevent_type: marriage\nfamily_id: F2\ndate:\n  precision: year_only\n  year: 1885\n'); // DAD si risposa nel 1885
+    expect(messages()).toContainEqual(expect.stringMatching(/Possibile unione sovrapposta o bigamia/));
+  });
+
+  it('eventi postumi fisiologici (will, probate, burial) non generano avviso dopo la morte', () => {
+    baseFamily();
+    person('KID', 'sex: male\nbirth_event_id: E_KID_B\ndeath_event_id: E_KID_D\n');
+    event('E_KID_D', 'death', 'KID', 1900);
+    write('events/E_KID_WILL.yml', 'id: E_KID_WILL\nevent_type: will\nperson_ids: [KID]\ndate:\n  precision: year_only\n  year: 1901\n');
+    expect(messages().filter((m) => m.includes('si svolge dopo la morte'))).toEqual([]);
   });
 
   it('paternità in età avanzata tra 65 e 75 anni', () => {
@@ -372,7 +402,7 @@ describe('Nuovi controlli di qualità e coerenza genealogica', () => {
     expect(messages()).toContainEqual(expect.stringMatching(/paternità in età avanzata/));
   });
 
-  it('persona centenaria marcata living-person restricted genera errore bloccante', () => {
+  it('persona centenaria marcata living-person restricted genera avviso di incoerenza privacy', () => {
     baseFamily();
     person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\nprivacy: living-person restricted\n');
     event('E_DAD_B', 'birth', 'DAD', 1850);
@@ -382,21 +412,44 @@ describe('Nuovi controlli di qualità e coerenza genealogica', () => {
     }));
   });
 
-  it('citazione guscio vuoto priva di coordinate minime', () => {
+  it('persona con evento di morte ma marcata living-person restricted genera avviso', () => {
     baseFamily();
-    write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
-    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\n');
-    expect(messages()).toContainEqual(expect.stringMatching(/Citazione 'C1' priva di coordinate minime/));
+    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ndeath_event_id: E_DAD_D\nprivacy: living-person restricted\n');
+    event('E_DAD_B', 'birth', 'DAD', 1950);
+    event('E_DAD_D', 'death', 'DAD', 2020);
+    expect(messages()).toContainEqual(expect.stringMatching(/con evento di morte\/sepoltura.*marcata 'living-person restricted'/));
   });
 
-  it('disallineamento persona-evento nella citazione genera errore bloccante', () => {
+  it('persona storica nata oltre 110 anni fa senza evento di morte non genera avviso se non marcata vivente', () => {
+    baseFamily();
+    person('ANC', 'sex: male\nbirth_event_id: E_ANC_B\n');
+    event('E_ANC_B', 'birth', 'ANC', 1880);
+    expect(messages().filter((m) => m.includes('vivente') || m.includes('presunzione'))).toEqual([]);
+  });
+
+  it('end_event_id con tipo evento inatteso genera avviso', () => {
+    baseFamily();
+    write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nstart_event_id: E_MAR\nend_event_id: E_WRONG\n');
+    write('events/E_MAR.yml', 'id: E_MAR\nevent_type: marriage\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1870\n');
+    write('events/E_WRONG.yml', 'id: E_WRONG\nevent_type: birth\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1875\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/L'evento 'E_WRONG' è di tipo 'birth', atteso divorce\/annulment\/separation/));
+  });
+
+  it('spostamento a velocità impossibile prima del 1920 genera avviso', () => {
+    baseFamily();
+    write('places/PLC_ROMA.yml', 'id: PLC_ROMA\nname: Roma\nlatitude: 41.9028\nlongitude: 12.4964\n');
+    write('places/PLC_MILANO.yml', 'id: PLC_MILANO\nname: Milano\nlatitude: 45.4642\nlongitude: 9.1900\n');
+    write('events/E_ROMA.yml', 'id: E_ROMA\nevent_type: residence\nperson_ids: [DAD]\nplace_id: PLC_ROMA\ndate:\n  precision: exact\n  year: 1900\n  month: 5\n  day: 1\n');
+    write('events/E_MILANO.yml', 'id: E_MILANO\nevent_type: residence\nperson_ids: [DAD]\nplace_id: PLC_MILANO\ndate:\n  precision: exact\n  year: 1900\n  month: 5\n  day: 2\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/Spostamento apparentemente impossibile.*verificare possibile omonimia/));
+  });
+
+  it('citazione con person_id di un genitore collegata a un evento di nascita del figlio è valida', () => {
     baseFamily();
     write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
-    // Citazione riferisce DAD ma evento E_KID_B elenca solo KID
-    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: DAD\nevent_id: E_KID_B\npage_or_folio: "p. 1"\n');
+    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: father_residence\nperson_id: DAD\nevent_id: E_KID_B\npage_or_folio: "p. 1"\n');
     const res = loadAndValidateDataset(dir);
-    expect(res.valid).toBe(false);
-    expect(res.errors[0].message).toMatch(/non include questa persona nei suoi person_ids/);
+    expect(res.valid).toBe(true);
   });
 
   it('ciclo nella gerarchia dei luoghi genera errore bloccante', () => {
@@ -406,6 +459,14 @@ describe('Nuovi controlli di qualità e coerenza genealogica', () => {
     const res = loadAndValidateDataset(dir);
     expect(res.valid).toBe(false);
     expect(res.errors[0].message).toMatch(/Ciclo rilevato nella gerarchia dei luoghi/);
+  });
+
+  it('riferimenti sconosciuti nel registro ricerche generano errore bloccante', () => {
+    baseFamily();
+    write('research/registro_ricerche.yml', 'searches:\n  - date: "2026-01-01"\n    goal: "Test"\n    outcome: not_found\n    references: [NON_ESISTE]\n');
+    const res = loadAndValidateDataset(dir);
+    expect(res.valid).toBe(false);
+    expect(res.errors.some((e) => e.message.includes("Unknown reference 'NON_ESISTE' in research log"))).toBe(true);
   });
 });
 

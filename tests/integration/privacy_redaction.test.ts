@@ -2,7 +2,13 @@ import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { runBuildCommand } from '../../src/cli/build.js';
-import { pseudonymFor } from '../../src/privacy/filter.js';
+import { pseudonymFor, applyPublicProfile } from '../../src/privacy/filter.js';
+import { PersonSchema } from '../../src/model/person.js';
+import { MediaSchema } from '../../src/model/media.js';
+import { SourceSchema } from '../../src/model/source.js';
+import { SourceCitationSchema } from '../../src/model/citation.js';
+import { EventSchema } from '../../src/model/event.js';
+import { NormalizedDataset } from '../../src/validator/index.js';
 
 // Nessun file di configurazione: valori predefiniti (chiave vuota, nessun vivo nominato).
 const noConfig = path.resolve('tests/fixtures/mixed-dataset/__nessuna_config__.yml');
@@ -99,5 +105,53 @@ describe('Privacy Redaction Integration', () => {
     } finally {
       fs.rmSync(leakDir, { recursive: true, force: true });
     }
+  });
+
+  it('excludes document scan of living person even if person_ids is omitted', () => {
+    const living = PersonSchema.parse({
+      id: 'L002',
+      given_names: 'Mario',
+      surname: 'Rossi',
+      privacy: 'living-person restricted',
+    });
+    const birthEvt = EventSchema.parse({
+      id: 'E_BIRTH_L002',
+      event_type: 'birth',
+      person_ids: ['L002'],
+      date: { year: 1985, precision: 'exact' },
+    });
+    const source = SourceSchema.parse({
+      id: 'SRC_ACT',
+      title: 'Atto di nascita recente',
+      source_type: 'civil_registry',
+    });
+    const citation = SourceCitationSchema.parse({
+      id: 'CIT_ACT',
+      source_id: 'SRC_ACT',
+      person_id: 'L002',
+      event_id: 'E_BIRTH_L002',
+      claim_type: 'birth_record',
+    });
+    // Media senza person_ids ma legato alla fonte SRC_ACT
+    const scanMedia = MediaSchema.parse({
+      id: 'MED_ACT',
+      file_path: 'scans/atto_1985.jpg',
+      media_type: 'document_scan',
+      source_id: 'SRC_ACT',
+    });
+
+    const dataset: NormalizedDataset = {
+      people: new Map([['L002', living]]),
+      families: new Map(),
+      relationships: [],
+      events: new Map([['E_BIRTH_L002', birthEvt]]),
+      places: new Map(),
+      sources: new Map([['SRC_ACT', source]]),
+      citations: new Map([['CIT_ACT', citation]]),
+      media: new Map([['MED_ACT', scanMedia]]),
+    };
+
+    const publicRes = applyPublicProfile(dataset);
+    expect(publicRes.dataset.media.has('MED_ACT')).toBe(false);
   });
 });

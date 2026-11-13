@@ -7,6 +7,7 @@ export interface InitOptions {
   targetDir?: string;
   name?: string;
   force?: boolean;
+  templatesDir?: string;
 }
 
 const REQUIRED_DATA_DIRS = [
@@ -47,7 +48,7 @@ export function runInitCommand(options: InitOptions = {}): number {
   }
 
   // 2. Trova la cartella templates/
-  const templatesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates');
+  const templatesDir = options.templatesDir || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../templates');
 
   const writeFileSafe = (relPath: string, content: string, mode?: number) => {
     const fullPath = path.join(targetDir, relPath);
@@ -69,21 +70,22 @@ export function runInitCommand(options: InitOptions = {}): number {
 
   // 3. archivio.config.yml con pseudonym_key generata casualmente
   const randomKey = crypto.randomBytes(16).toString('hex');
+  const safeArchiveName = archiveName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   let configContent = '';
   const templateConfigPath = path.join(templatesDir, 'archivio.config.yml');
   if (fs.existsSync(templateConfigPath)) {
     configContent = fs.readFileSync(templateConfigPath, 'utf-8');
-    configContent = configContent.replace(/<Cognome>/g, archiveName);
+    configContent = configContent.replace(/<Cognome>/g, safeArchiveName);
     configContent = configContent.replace(/"CAMBIAMI"/g, `"${randomKey}"`);
   } else {
     configContent = `# Configurazione dell'archivio. Tienila solo nel repository privato.
 site:
-  title: Archivio ${archiveName}
-  subtitle: Fondo di famiglia
-  description: Archivio genealogico della famiglia ${archiveName}
-  footer: Archivio di famiglia · ogni dato rimanda alla sua fonte
-  home_title: Archivio della famiglia ${archiveName}
-  home_intro: Ogni persona è un fascicolo, ogni dato rimanda all'atto che lo prova.
+  title: ${JSON.stringify(`Archivio ${archiveName}`)}
+  subtitle: "Fondo di famiglia"
+  description: ${JSON.stringify(`Archivio genealogico della famiglia ${archiveName}`)}
+  footer: "Archivio di famiglia · ogni dato rimanda alla sua fonte"
+  home_title: ${JSON.stringify(`Archivio della famiglia ${archiveName}`)}
+  home_intro: "Ogni persona è un fascicolo, ogni dato rimanda all'atto che lo prova."
 next_steps_file: NEXT_STEPS.md
 privacy:
   named_living_ids: []
@@ -141,7 +143,13 @@ Viene visualizzato solo nel profilo privato del sito statico.
   // 9. package.json se non esiste già
   const packageJsonPath = path.join(targetDir, 'package.json');
   if (!fs.existsSync(packageJsonPath) || force) {
-    const slugName = archiveName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const slugName =
+      archiveName
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'famiglia';
     const pkgTemplatePath = path.join(templatesDir, 'package.json');
     let pkgContent = '';
     if (fs.existsSync(pkgTemplatePath)) {

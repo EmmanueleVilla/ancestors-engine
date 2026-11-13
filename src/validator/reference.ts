@@ -146,17 +146,6 @@ export function validateReferences(dataset: DatasetIndex): ValidationError[] {
     checkExists(dataset.relationships, 'relationship', cit.relationship_id, file, 'relationship_id');
     checkExists(dataset.families, 'family', cit.family_id, file, 'family_id');
 
-    if (cit.person_id && cit.event_id && dataset.events.has(cit.event_id)) {
-      const evt = dataset.events.get(cit.event_id)!.data;
-      if (Array.isArray(evt.person_ids) && evt.person_ids.length > 0 && !evt.person_ids.includes(cit.person_id)) {
-        errors.push({
-          filePath: file,
-          field: 'person_id',
-          message: `Citazione '${id}' riferisce person_id '${cit.person_id}' ed event_id '${cit.event_id}', ma l'evento non include questa persona nei suoi person_ids.`,
-        });
-      }
-    }
-
     if (cit.family_id && cit.event_id && dataset.events.has(cit.event_id)) {
       const evt = dataset.events.get(cit.event_id)!.data;
       if (evt.family_id && evt.family_id !== cit.family_id) {

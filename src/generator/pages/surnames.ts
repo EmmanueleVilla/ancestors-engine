@@ -1,9 +1,13 @@
 import { escapeHtml } from '../components/base.js';
 import { renderLayout } from '../components/layout.js';
 import { NormalizedDataset } from '../../validator/index.js';
-import { isLiving, personLink } from '../components/fascicolo.js';
+import { isLiving, personLink, renderBreadcrumbs } from '../components/fascicolo.js';
 import { allSeries } from '../components/serie.js';
 import { Event } from '../../model/event.js';
+
+export function surnameAnchorId(surname: string): string {
+  return `cognome-${encodeURIComponent(surname.trim().toLowerCase())}`;
+}
 
 export function renderSurnamesIndexPage(dataset: NormalizedDataset, rootRelPath: string = '../'): string {
   const surnameMap = new Map<string, string[]>();
@@ -46,13 +50,18 @@ export function renderSurnamesIndexPage(dataset: NormalizedDataset, rootRelPath:
           const years: number[] = [];
           const placeCounts = new Map<string, number>();
 
-          for (const id of ids) {
-            const evs = personEvents.get(id) || [];
-            for (const ev of evs) {
-              if (ev.date?.year) years.push(ev.date.year);
-              if (ev.date?.end_year) years.push(ev.date.end_year);
-              if (ev.place_id) {
-                placeCounts.set(ev.place_id, (placeCounts.get(ev.place_id) || 0) + 1);
+          // Escludiamo il gruppo [Living] e le persone vive dal calcolo di date e luoghi frequenti
+          if (sur !== '[Living]') {
+            for (const id of ids) {
+              const p = dataset.people.get(id);
+              if (p && isLiving(p)) continue;
+              const evs = personEvents.get(id) || [];
+              for (const ev of evs) {
+                if (ev.date?.year) years.push(ev.date.year);
+                if (ev.date?.end_year) years.push(ev.date.end_year);
+                if (ev.place_id) {
+                  placeCounts.set(ev.place_id, (placeCounts.get(ev.place_id) || 0) + 1);
+                }
               }
             }
           }
@@ -71,10 +80,10 @@ export function renderSurnamesIndexPage(dataset: NormalizedDataset, rootRelPath:
             .filter(Boolean);
 
           return `
-          <div class="cognome">
+          <div class="cognome" id="${surnameAnchorId(sur)}">
             <h3>${escapeHtml(sur)} <span class="dattilo" title="${ids.length} su ${totalPeople} persone">${ids.length} (${pct}%)</span></h3>
             ${(timeSpan || topPlaces.length) ? `
-              <p class="cognome-meta muted" style="font-size:0.85rem; margin:-0.3rem 0 0.5rem">
+              <p class="cognome-meta">
                 ${timeSpan ? `<span class="periodo">Attestazione: <strong>${timeSpan}</strong></span>` : ''}
                 ${timeSpan && topPlaces.length ? ' · ' : ''}
                 ${topPlaces.length ? `<span class="luoghi">Luoghi: ${topPlaces.join(', ')}</span>` : ''}
@@ -91,7 +100,10 @@ export function renderSurnamesIndexPage(dataset: NormalizedDataset, rootRelPath:
     })
     .join('');
 
-  const breadcrumb = `<nav class="briciole" aria-label="Percorso"><a href="${rootRelPath}index.html">Archivio</a> <span class="separatore">/</span> <span>Persone</span></nav>`;
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: 'Persone' },
+  ]);
 
   const content = `
   ${breadcrumb}

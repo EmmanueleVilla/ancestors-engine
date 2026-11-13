@@ -1,11 +1,11 @@
 # Configurazione dell'archivio. Tienila solo nel repository privato.
 site:
-  title: Archivio <Cognome>
-  subtitle: Fondo di famiglia
-  description: Archivio genealogico della famiglia <Cognome>
-  footer: Archivio di famiglia · ogni dato rimanda alla sua fonte
-  home_title: Archivio della famiglia <Cognome>
-  home_intro: Ogni persona è un fascicolo, ogni dato rimanda all'atto che lo prova.
+  title: "Archivio <Cognome>"
+  subtitle: "Fondo di famiglia"
+  description: "Archivio genealogico della famiglia <Cognome>"
+  footer: "Archivio di famiglia · ogni dato rimanda alla sua fonte"
+  home_title: "Archivio della famiglia <Cognome>"
+  home_intro: "Ogni persona è un fascicolo, ogni dato rimanda all'atto che lo prova."
   # dataset_license: CC BY 4.0   # licenza del dataset scaricabile dal sito pubblico
 next_steps_file: NEXT_STEPS.md
 privacy:

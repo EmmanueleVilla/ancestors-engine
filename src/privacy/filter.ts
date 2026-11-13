@@ -92,13 +92,54 @@ export function applyPublicProfile(dataset: NormalizedDataset, options: PrivacyO
     else filteredPeople.set(id, { ...person });
   }
 
-  // Media: omessi se ritraggono solo persone vive
+  // Media: omessi se ritraggono persone vive o se sono scansioni di atti/documenti di persone vive
   const filteredMedia = new Map();
   for (const [id, med] of dataset.media.entries()) {
     if (privateEntityIds.has(id)) continue;
-    const depictsOnlyLiving =
-      med.person_ids && med.person_ids.length > 0 && med.person_ids.every((pId: string) => livingPersonIds.has(pId));
-    if (depictsOnlyLiving) continue;
+
+    // Raccoglie tutte le persone esplicitamente o implicitamente collegate al media
+    const relatedPersonIds = new Set<string>(med.person_ids ?? []);
+
+    // Se non ci sono persone esplicite, ricavale dagli eventi collegati
+    for (const evtId of med.event_ids ?? []) {
+      const evt = dataset.events.get(evtId);
+      if (evt?.person_ids) {
+        for (const pId of evt.person_ids) relatedPersonIds.add(pId);
+      }
+    }
+
+    // Se il media è legato a una fonte, ricava le persone dalle citazioni di quella fonte
+    if (med.source_id) {
+      for (const cit of dataset.citations.values()) {
+        if (cit.source_id === med.source_id) {
+          if (cit.person_id) relatedPersonIds.add(cit.person_id);
+          if (cit.event_id) {
+            const evt = dataset.events.get(cit.event_id);
+            if (evt?.person_ids) {
+              for (const pId of evt.person_ids) relatedPersonIds.add(pId);
+            }
+          }
+          if (cit.family_id) {
+            const fam = dataset.families.get(cit.family_id);
+            if (fam?.partner_ids) {
+              for (const pId of fam.partner_ids) relatedPersonIds.add(pId);
+            }
+          }
+        }
+      }
+    }
+
+    if (relatedPersonIds.size > 0) {
+      // Se tutte le persone collegate sono vive, il media non deve essere pubblico
+      const allLiving = [...relatedPersonIds].every((pId) => livingPersonIds.has(pId));
+      if (allLiving) continue;
+
+      // Se il media è la scansione di un atto o un certificato e riguarda almeno una persona viva, omettilo
+      const isDocument = med.media_type === 'document_scan' || med.media_type === 'certificate';
+      const hasLiving = [...relatedPersonIds].some((pId) => livingPersonIds.has(pId));
+      if (isDocument && hasLiving) continue;
+    }
+
     filteredMedia.set(id, { ...med });
   }
 

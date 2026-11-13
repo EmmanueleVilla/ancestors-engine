@@ -292,7 +292,15 @@ h1, h2, h3, h4 { text-wrap: balance; }
 .sezione { margin-top: 3rem; }
 .sezione:first-child { margin-top: 0; }
 
-.text-muted, .muto { color: var(--grafite); }
+.text-muted, .muted, .muto { color: var(--grafite); }
+.sottosezione-muto {
+  color: var(--grafite);
+  font-size: 0.9rem;
+  margin-top: 1.1rem;
+  margin-bottom: 0.35rem;
+  font-family: var(--f-titolo);
+  font-weight: 500;
+}
 .nota { font-size: 0.95rem; color: var(--grafite); font-style: italic; }
 
 /* Dattiloscritto: segnature, date, numeri */
@@ -760,11 +768,18 @@ h1, h2, h3, h4 { text-wrap: balance; }
 .nomi .punto-serie { margin-right: 0; }
 .alfabeto + .lettera { border-top: none; }
 .lettera-segno { font-family: var(--f-titolo); font-size: 3.2rem; line-height: 0.9; font-weight: 500; }
+.decennio-segno { font-size: 2.2rem; }
 .cognome { margin-bottom: 1.4rem; }
 .cognome:last-child { margin-bottom: 0; }
 .cognome h3 { display: flex; align-items: baseline; gap: 0.6rem; }
 .cognome h3 .dattilo { color: var(--grafite); font-weight: 400; font-family: var(--f-dattilo); font-size: 0.8rem; }
-.nomi { list-style: none; padding: 0 !important; columns: 15rem auto; column-gap: 2rem; }
+.cognome-meta {
+  font-size: 0.85rem;
+  margin: -0.3rem 0 0.5rem;
+  color: var(--grafite);
+}
+.nomi { list-style: none; padding: 0 !important; columns: 15rem auto; column-gap: 2rem; margin-bottom: 1rem; }
+.nomi:last-child { margin-bottom: 0; }
 .nomi li { break-inside: avoid; margin: 0 0 0.2rem; display: flex; gap: 0.5rem; align-items: baseline; }
 .punto-serie { display: inline-block; margin-right: 0.4rem; width: 0.6rem; height: 0.6rem; flex: none; background: var(--serie-0); border-radius: 1px; transform: translateY(-0.05em); }
 .punto-serie.serie-1 { background: var(--serie-1); }
@@ -819,6 +834,13 @@ h1, h2, h3, h4 { text-wrap: balance; }
 /* ==========================================================================
    Cerca
    ========================================================================== */
+.search-label {
+  display: block;
+  margin-top: 2rem;
+}
+.search-label + .search-input {
+  margin-top: 0.25rem;
+}
 .search-input, .search-box {
   width: 100%;
   max-width: 40rem;
@@ -849,15 +871,17 @@ h1, h2, h3, h4 { text-wrap: balance; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .tree-head .page-title { font-size: clamp(1.9rem, 4vw, 3rem); }
 
-.breadcrumbs {
+.breadcrumbs, .breadcrumb, .briciole {
   font-family: var(--f-dattilo);
   font-size: 0.8rem;
   color: var(--grafite);
   margin-bottom: 0.55rem;
   letter-spacing: 0.02em;
+  list-style: none;
+  padding: 0;
 }
-.breadcrumbs a { color: var(--grafite); }
-.breadcrumbs .sep { margin: 0 0.4rem; color: var(--riga-forte); }
+.breadcrumbs a, .breadcrumb a, .briciole a { color: var(--grafite); }
+.breadcrumbs .sep, .breadcrumb .sep, .briciole .sep, .briciole .separatore { margin: 0 0.4rem; color: var(--riga-forte); }
 
 .canvas-toolbar {
   display: flex;
@@ -1097,7 +1121,53 @@ h1, h2, h3, h4 { text-wrap: balance; }
 .marriage-media-caption { display: block; font-size: 0.78rem; line-height: 1.3; margin-top: 0.3rem; }
 .marriage-media-list .media-pdf-tile { aspect-ratio: auto; min-height: 7.5rem; font-size: 0.7rem; }
 
-.next-step-box { padding: 0.85rem 1rem; background: var(--foglio-2); border-radius: 2px; }
+.page-title.fonte-titolo { font-size: clamp(1.9rem, 4.2vw, 3rem); }
+
+.biografia p { white-space: pre-line; }
+
+.unrecorded-box {
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+}
+.unrecorded-box .muto {
+  margin-top: 0.25rem;
+}
+
+.coordinate-box {
+  margin-top: 0.6rem;
+  font-size: 0.9em;
+  color: var(--grafite);
+}
+
+.registro-corpo .timbro {
+  margin: 0.6rem 0 0;
+}
+
+.albero-sezione {
+  margin-bottom: 1.5rem;
+}
+.albero-sezione:last-child {
+  margin-bottom: 0;
+}
+.albero-sezione-titolo {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.legami-sottotitolo {
+  font-size: 0.85em;
+  margin-top: 0.3rem;
+  color: var(--grafite);
+}
+
+.occupazioni {
+  margin-top: 0.4rem;
+  color: var(--grafite);
+}
+
+.next-step-box { padding: 0.85rem 1rem; background: var(--foglio-2); border-radius: 2px; margin-top: 1.25rem; }
 .next-step-box p { margin: 0.35rem 0; font-size: 0.95rem; }
 
 /* ==========================================================================

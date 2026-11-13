@@ -2,7 +2,7 @@ import { escapeHtml } from '../components/base.js';
 import { renderLayout } from '../components/layout.js';
 import { Source } from '../../model/source.js';
 import { NormalizedDataset } from '../../validator/index.js';
-import { eventLabel, nameOf, personLink, sourceTypeLabel } from '../components/fascicolo.js';
+import { eventLabel, isLiving, nameOf, personLink, renderBreadcrumbs, sourceTypeLabel } from '../components/fascicolo.js';
 import { isPdfMedia } from '../../model/media.js';
 
 const RELIABILITY: Record<string, string> = { high: 'alta', moderate: 'media', low: 'bassa', uncertain: 'incerta' };
@@ -29,9 +29,7 @@ export function renderSourcePage(
         .map((c, i) => {
           let who = '';
           if (c.person_id) {
-            const p = dataset.people.get(c.person_id);
-            const evtLink = c.event_id ? `#evt-${c.event_id}` : '';
-            who = `<a href="${rootRelPath}people/${c.person_id}.html${evtLink}">${escapeHtml(nameOf(p, c.person_id))}</a>`;
+            who = personLink(c.person_id, dataset, rootRelPath, false);
           } else if (c.family_id) {
             who = `<a href="${rootRelPath}families/${c.family_id}.html">Famiglia ${escapeHtml(c.family_id)}</a>`;
           } else if (c.event_id) {
@@ -46,14 +44,18 @@ export function renderSourcePage(
               ${who ? `<div class="registro-titolo">${who}</div>` : ''}
               ${c.page_or_folio ? `<p class="registro-desc">${escapeHtml(c.page_or_folio)}</p>` : ''}
               ${c.quoted_text ? `<div class="allegato"><blockquote>${escapeHtml(c.quoted_text)}</blockquote></div>` : ''}
-              ${c.confidence && c.confidence !== 'certain' ? '<span class="timbro" style="margin:0.6rem 0 0">Da confermare</span>' : ''}
+              ${c.confidence && c.confidence !== 'certain' ? '<span class="timbro">Da confermare</span>' : ''}
             </div>
           </li>`;
         })
         .join('')}</ol>`
     : '<p class="muto">Nessuna citazione collegata a questa fonte.</p>';
 
-  const media = [...dataset.media.values()].filter((m) => m.source_id === source.id);
+  const media = [...dataset.media.values()].filter((m) => {
+    if (m.source_id !== source.id) return false;
+    if (m.person_ids?.some((pid) => isLiving(dataset.people.get(pid)))) return false;
+    return true;
+  });
   const mediaHtml = media.length
     ? `
     <section class="sezione" aria-labelledby="media-titolo">
@@ -77,18 +79,18 @@ export function renderSourcePage(
     </section>`
     : '';
 
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: 'Fonti', href: `${rootRelPath}sources/index.html` },
+    { label: source.title },
+  ]);
+
   const content = `
-  <nav class="breadcrumb" aria-label="Percorso">
-    <ol>
-      <li><a href="${rootRelPath}index.html">Archivio</a></li>
-      <li><a href="${rootRelPath}sources/index.html">Fonti</a></li>
-      <li aria-current="page">${escapeHtml(source.title)}</li>
-    </ol>
-  </nav>
+  ${breadcrumb}
 
   <header class="intestazione">
     <div>
-      <h1 class="page-title" style="font-size: clamp(1.9rem, 4.2vw, 3rem)">${escapeHtml(source.title)}</h1>
+      <h1 class="page-title fonte-titolo">${escapeHtml(source.title)}</h1>
       <p class="sottotitolo">${escapeHtml(sourceTypeLabel(source.source_type))}</p>
     </div>
   </header>

@@ -217,7 +217,6 @@ export function loadAndValidateDataset(dataDir: string, options: LoadAndValidate
     records: research.flatMap((r) => r.references),
     relationships: derivedRels,
     rootId: options.rootId,
-    researchEntries: research,
   }) : [];
 
   const valid = errors.length === 0;

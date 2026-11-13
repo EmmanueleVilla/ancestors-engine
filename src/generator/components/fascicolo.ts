@@ -136,3 +136,19 @@ export function dataIt(text: string): string {
     .replace(/^after\s+/, 'dopo il ')
     .replace(/^between\s+(.+)\s+and\s+(.+)$/, 'tra il $1 e il $2');
 }
+
+export interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+export function renderBreadcrumbs(items: BreadcrumbItem[]): string {
+  const parts = items.map((item, i) => {
+    const isLast = i === items.length - 1;
+    if (isLast || !item.href) {
+      return `<span aria-current="page">${escapeHtml(item.label)}</span>`;
+    }
+    return `<a href="${item.href}">${escapeHtml(item.label)}</a>`;
+  });
+  return `<nav class="breadcrumbs" aria-label="Percorso">${parts.join('<span class="sep">/</span>')}</nav>`;
+}

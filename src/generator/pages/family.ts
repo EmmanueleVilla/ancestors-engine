@@ -3,7 +3,7 @@ import { renderLayout } from '../components/layout.js';
 import { Family } from '../../model/family.js';
 import { NormalizedDataset } from '../../validator/index.js';
 import { fascicolo, serieOf } from '../components/serie.js';
-import { cartellino, computeAgeAtEvent, dataIt, eventLabel, nameOf, personLink, serieLabel } from '../components/fascicolo.js';
+import { cartellino, computeAgeAtEvent, dataIt, eventLabel, nameOf, personLink, renderBreadcrumbs, serieLabel } from '../components/fascicolo.js';
 import { getSiteSettings } from '../site.js';
 import { formatDate } from '../../model/date.js';
 
@@ -87,17 +87,17 @@ export function renderFamilyPage(
     : '';
 
   const unrecordedHtml = family.unrecorded_children
-    ? `<div class="unrecorded-box" style="margin-top:0.75rem"><span class="badge">Altri figli</span> ${escapeHtml(family.unrecorded_children.label || `${family.unrecorded_children.count} figli non documentati individualmente`)}${family.unrecorded_children.note ? `<p class="muto">${escapeHtml(family.unrecorded_children.note)}</p>` : ''}</div>`
+    ? `<div class="unrecorded-box"><span class="badge">Altri figli</span> ${escapeHtml(family.unrecorded_children.label || `${family.unrecorded_children.count} figli non documentati individualmente`)}${family.unrecorded_children.note ? `<p class="muto">${escapeHtml(family.unrecorded_children.note)}</p>` : ''}</div>`
     : '';
 
+  const breadcrumb = renderBreadcrumbs([
+    { label: 'Archivio', href: `${rootRelPath}index.html` },
+    { label: 'Famiglie', href: `${rootRelPath}surnames/index.html` },
+    { label: title },
+  ]);
+
   const content = `
-  <nav class="breadcrumb" aria-label="Percorso">
-    <ol>
-      <li><a href="${rootRelPath}index.html">Archivio</a></li>
-      <li><a href="${rootRelPath}surnames/index.html">Famiglie</a></li>
-      <li aria-current="page">${escapeHtml(title)}</li>
-    </ol>
-  </nav>
+  ${breadcrumb}
 
   <header class="intestazione">
     <div>

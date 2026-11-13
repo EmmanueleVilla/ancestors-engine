@@ -34,6 +34,9 @@ describe('Sources & Citations Integration', () => {
     expect(srcHtml).toContain('Warwick County Record Office');
     expect(srcHtml).toContain('DR 45/1');
     expect(srcHtml).toContain('Thomas baptized 15 April 1875');
+    // personLink includes punto-serie swatch and link to person
+    expect(srcHtml).toContain('punto-serie');
+    expect(srcHtml).toContain('href="../people/P003.html"');
 
     // 3. Person profile shows citation card
     const personHtml = fs.readFileSync(path.join(testOutDir, 'people', 'P003.html'), 'utf-8');
