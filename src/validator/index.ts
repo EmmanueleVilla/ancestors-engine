@@ -13,7 +13,7 @@ import { scanDirectoryRecursive } from '../parser/discover.js';
 import path from 'node:path';
 import { deriveRelationships } from './derive.js';
 import { validateReferences, DatasetIndex, ValidationError } from './reference.js';
-import { detectKinshipCycles } from './cycle.js';
+import { detectKinshipCycles, detectPlaceCycles } from './cycle.js';
 import { checkConsistency } from './consistency.js';
 
 export interface NormalizedDataset {
@@ -200,12 +200,24 @@ export function loadAndValidateDataset(dataDir: string, options: LoadAndValidate
     }
   }
 
+  const placeCycleResult = detectPlaceCycles(index.places);
+  if (placeCycleResult.hasCycle) {
+    for (const cycle of placeCycleResult.cycles) {
+      errors.push({
+        filePath: 'place-hierarchy',
+        field: 'parent_place_id',
+        message: `Ciclo rilevato nella gerarchia dei luoghi: ${cycle}`,
+      });
+    }
+  }
+
   // 4. Coerenza (date, età, collegamenti, record orfani, parents_next_step)
   const warnings = errors.length === 0 ? checkConsistency(index, {
     media: research.flatMap((r) => r.media ?? []),
     records: research.flatMap((r) => r.references),
     relationships: derivedRels,
     rootId: options.rootId,
+    researchEntries: research,
   }) : [];
 
   const valid = errors.length === 0;

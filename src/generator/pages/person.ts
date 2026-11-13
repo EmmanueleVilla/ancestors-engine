@@ -5,7 +5,7 @@ import { Person } from '../../model/person.js';
 import { formatDate } from '../../model/date.js';
 import { NormalizedDataset } from '../../validator/index.js';
 import { serieOf } from '../components/serie.js';
-import { dataIt, eventLabel, nameOf, personLink, personSegnatura } from '../components/fascicolo.js';
+import { computeAgeAtEvent, dataIt, eventLabel, nameOf, personLink, personSegnatura } from '../components/fascicolo.js';
 
 const CONFIDENCE_IT: Record<string, string> = {
   probable: 'probabile',
@@ -60,6 +60,60 @@ export function renderPersonPage(
     })
     .join('');
 
+  // Fratelli e sorelle
+  const parentIds = new Set(parentRels.map((r) => r.person_id));
+  const fullSiblings = new Set<string>();
+  const halfSiblings = new Set<string>();
+
+  if (parentIds.size > 0) {
+    for (const fam of dataset.families.values()) {
+      const famPartners = fam.partner_ids ?? [];
+      const sharedParents = famPartners.filter((p) => parentIds.has(p));
+      if (sharedParents.length > 0) {
+        for (const childId of fam.children_ids ?? []) {
+          if (childId === person.id) continue;
+          if (sharedParents.length >= 2 || (parentIds.size === 1 && sharedParents.length === 1)) {
+            fullSiblings.add(childId);
+          } else {
+            halfSiblings.add(childId);
+          }
+        }
+      }
+    }
+  }
+  for (const fs of fullSiblings) halfSiblings.delete(fs);
+
+  const siblingsHtml = fullSiblings.size > 0 || halfSiblings.size > 0
+    ? `
+      <dt>Fratelli e sorelle</dt>
+      <dd>
+        ${fullSiblings.size > 0 ? `<ul>${[...fullSiblings].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+        ${halfSiblings.size > 0 ? `<div class="muto" style="font-size:0.85em;margin-top:0.3rem">Fratellastri / sorellastre:</div><ul>${[...halfSiblings].map((id) => `<li>${personLink(id, dataset, rootRelPath)} <span class="badge">unilaterale</span></li>`).join('')}</ul>` : ''}
+      </dd>`
+    : '';
+
+  // Estremi: nascita e morte
+  const birth = person.birth_event_id ? dataset.events.get(person.birth_event_id) : undefined;
+  const death = person.death_event_id ? dataset.events.get(person.death_event_id) : undefined;
+  const placeName = (id?: string) => (id ? dataset.places.get(id)?.name : undefined);
+  const evText = (e: typeof birth, mark: string, extra = '') => {
+    if (!e) return '';
+    const pl = placeName(e.place_id);
+    const placeLink = pl
+      ? `, <a href="${rootRelPath}places/${e.place_id}.html" class="link-luogo">${escapeHtml(pl)}</a>`
+      : '';
+    return `${mark} ${dataIt(formatDate(e.date)) || 's.d.'}${placeLink}${extra ? ` <span class="eta">${escapeHtml(extra)}</span>` : ''}`;
+  };
+  const ageAtDeath = computeAgeAtEvent(birth?.date, death?.date);
+  const estremi = isLiving
+    ? ''
+    : [
+        birth ? `<span>${evText(birth, 'n.')}</span>` : '',
+        death ? `<span class="croce">${evText(death, '†', ageAtDeath ? `(${ageAtDeath})` : '')}</span>` : '',
+      ]
+        .filter(Boolean)
+        .join('');
+
   // Registro degli eventi, con allegati numerati
   let allegatoN = 0;
   const personEvents = [...dataset.events.values()]
@@ -72,6 +126,7 @@ export function renderPersonPage(
     ? `<ol class="registro">${personEvents
         .map((e) => {
           const place = e.place_id ? dataset.places.get(e.place_id) : undefined;
+          const ageStr = e.id !== person.birth_event_id && birth?.date ? computeAgeAtEvent(birth.date, e.date) : '';
           const cits = (e.source_citation_ids || [])
             .map((cId) => {
               const cit = dataset.citations.get(cId);
@@ -80,14 +135,14 @@ export function renderPersonPage(
               allegatoN++;
               return `
               <div class="allegato">
-                <div class="allegato-rif"><span class="n">All. ${allegatoN}</span><a href="${rootRelPath}sources/${cit.source_id}.html">${escapeHtml(src ? src.title : cit.source_id)}</a>${cit.page_or_folio ? `, ${escapeHtml(cit.page_or_folio)}` : ''}</div>
+                <div class="allegato-rif"><span class="n">All. ${allegatoN}</span><a href="${rootRelPath}sources/${cit.source_id}.html#cit-${cit.id}">${escapeHtml(src ? src.title : cit.source_id)}</a>${cit.page_or_folio ? `, ${escapeHtml(cit.page_or_folio)}` : ''}</div>
                 ${cit.quoted_text ? `<blockquote>${escapeHtml(cit.quoted_text)}</blockquote>` : ''}
               </div>`;
             })
             .join('');
           return `
-          <li>
-            <div class="registro-data">${escapeHtml(dataIt(formatDate(e.date)) || 's.d.')}<span class="tipo">${escapeHtml(eventLabel(e.event_type))}</span></div>
+          <li id="evt-${escapeHtml(e.id)}">
+            <div class="registro-data">${escapeHtml(dataIt(formatDate(e.date)) || 's.d.')}${ageStr ? `<span class="eta">${escapeHtml(ageStr)}</span>` : ''}<span class="tipo">${escapeHtml(eventLabel(e.event_type))}</span></div>
             <div class="registro-corpo">
               <div class="registro-titolo">${escapeHtml(eventLabel(e.event_type))}${place ? ` a <a href="${rootRelPath}places/${place.id}.html">${escapeHtml(place.name)}</a>` : ''}${e.date?.precision === 'estimated' || e.date?.precision === 'approximate' || e.confidence === 'estimated' ? '<span class="timbro">Stimato</span>' : e.confidence && e.confidence !== 'certain' ? '<span class="timbro">Da confermare</span>' : ''}</div>
               ${e.description ? `<p class="registro-desc">${escapeHtml(e.description)}</p>` : ''}
@@ -97,21 +152,6 @@ export function renderPersonPage(
         })
         .join('')}</ol>`
     : '<p class="muto">Nessun evento registrato.</p>';
-
-  // Estremi: nascita e morte
-  const birth = person.birth_event_id ? dataset.events.get(person.birth_event_id) : undefined;
-  const death = person.death_event_id ? dataset.events.get(person.death_event_id) : undefined;
-  const placeName = (id?: string) => (id ? dataset.places.get(id)?.name : undefined);
-  const evText = (e: typeof birth, mark: string) => {
-    if (!e) return '';
-    const pl = placeName(e.place_id);
-    return escapeHtml(`${mark} ${dataIt(formatDate(e.date)) || 's.d.'}${pl ? `, ${pl}` : ''}`);
-  };
-  const estremi = isLiving
-    ? ''
-    : [birth ? `<span>${evText(birth, 'n.')}</span>` : '', death ? `<span class="croce">${evText(death, '†')}</span>` : '']
-        .filter(Boolean)
-        .join('');
 
   // Allegati fotografici
   const mediaIds = [
@@ -150,6 +190,15 @@ export function renderPersonPage(
   const nextStep = !isLiving && person.parents_next_step && parentRels.length < 2 ? person.parents_next_step : '';
 
   const content = `
+  <nav class="breadcrumb" aria-label="Percorso">
+    <ol>
+      <li><a href="${rootRelPath}index.html">Archivio</a></li>
+      <li><a href="${rootRelPath}surnames/index.html">Persone</a></li>
+      ${person.surname && !isLiving ? `<li><a href="${rootRelPath}surnames/index.html#cognome-${encodeURIComponent(person.surname.toLowerCase())}">${escapeHtml(person.surname)}</a></li>` : ''}
+      <li aria-current="page">${escapeHtml(displayName)}</li>
+    </ol>
+  </nav>
+
   <header class="intestazione">
     <div>
       <h1 class="page-title">${escapeHtml(displayName)}${isLiving ? '<span class="timbro grande">Riservato</span>' : ''}</h1>
@@ -175,6 +224,7 @@ export function renderPersonPage(
     <dl class="legami">
       <dt>Genitori</dt>
       <dd>${parentsHtml}</dd>
+      ${siblingsHtml}
       ${unioniHtml}
     </dl>
   </section>
@@ -194,12 +244,28 @@ export function renderPersonPage(
   </section>` : ''}
   `;
 
+  const jsonLd = !isLiving
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: displayName,
+        givenName: person.given_names,
+        familyName: person.surname,
+        ...(person.sex === 'male' || person.sex === 'female' ? { gender: person.sex } : {}),
+        ...(birth?.date?.year ? { birthDate: formatDate(birth.date) } : {}),
+        ...(death?.date?.year ? { deathDate: formatDate(death.date) } : {}),
+        ...(birth?.place_id ? { birthPlace: { '@type': 'Place', name: placeName(birth.place_id) } } : {}),
+        ...(death?.place_id ? { deathPlace: { '@type': 'Place', name: placeName(death.place_id) } } : {}),
+      }
+    : undefined;
+
   return renderLayout({
     title: displayName,
     description: `Fascicolo di ${displayName}`,
     rootRelPath,
     activeNav: 'surnames',
     serie,
+    jsonLd,
     content,
   });
 }

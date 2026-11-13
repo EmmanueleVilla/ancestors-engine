@@ -1196,3 +1196,51 @@ h1, h2, h3, h4 { text-wrap: balance; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* Albero accessibile (testuale) */
+.albero-accessibile {
+  margin-top: 1.5rem;
+  background: var(--foglio);
+  border: 1px solid var(--riga);
+  border-radius: 4px;
+  padding: 1rem;
+}
+.albero-accessibile summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font-dattilo);
+  font-size: 0.95rem;
+}
+.albero-accessibile-contenuto {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+.albero-accessibile .tree-branch {
+  display: flex;
+  align-items: center;
+  margin: 0.35rem 0;
+}
+.albero-accessibile .tree-node {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--riga);
+  border-radius: 3px;
+  background: var(--foglio);
+  margin: 0.2rem 0.6rem 0.2rem 0;
+  white-space: nowrap;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.05);
+}
+.albero-accessibile .tree-node.living {
+  border-style: dashed;
+}
+.albero-accessibile .tree-node .anni {
+  font-size: 0.75rem;
+  font-family: var(--font-dattilo);
+  color: var(--inchiostro-chiaro);
+}
+.albero-accessibile .rami {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--riga);
+  padding-left: 0.6rem;
+  margin-left: 0.3rem;
+}

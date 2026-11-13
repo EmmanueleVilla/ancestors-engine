@@ -1,35 +1,54 @@
-/* Print styles */
+/* Stili di stampa per l'archivio genealogico */
 @media print {
-  body {
-    background: #ffffff;
-    color: #000000;
-    font-size: 11pt;
+  @page {
+    margin: 1.5cm;
+    size: auto;
   }
 
-  .site-header,
-  .site-nav,
-  .search-input,
-  .site-footer,
-  .no-print {
+  body {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  /* Nascondi elementi di navigazione e decorativi non stampabili */
+  .barra,
+  #nav-principale,
+  .piede,
+  .no-print,
+  .tasto-nav,
+  .albero-canvas-toolbar,
+  .cerca-barra {
     display: none !important;
   }
 
-  .main-content {
-    max-width: 100%;
-    margin: 0;
-    padding: 0;
+  /* Adatta il contenitore del fascicolo */
+  .scrivania,
+  .foglio {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
-  .card {
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin-bottom: 1.5rem;
+  .sezione,
+  .scheda-sommario,
+  .cartellino,
+  .item-registro {
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .sezione {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
   }
 
   a {
-    color: #000000;
+    color: #1a1a1a !important;
     text-decoration: underline;
   }
 
@@ -38,11 +57,9 @@
     font-size: 80%;
   }
 
-  .timeline-list::before {
-    display: none;
-  }
-
-  .timeline-item::before {
-    display: none;
+  /* Timeline su carta */
+  .timeline-decennio {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

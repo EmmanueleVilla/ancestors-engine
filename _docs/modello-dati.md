@@ -54,6 +54,7 @@ Lo schema conserva una sola conclusione per evento. Le asserzioni in conflitto r
 - `unrecorded_children` (famiglia): figli che sappiamo esistere ma che non inseriamo come persone.
 - `tags: [scollegato]` (persona): la persona è volutamente fuori dall'albero, perché nessun atto prova il legame. Senza questo tag, il controllo avvisa se la persona non è in nessuna famiglia.
 - `tags: [conoscenza_diretta]` (persona): la fonte è la conoscenza diretta della famiglia, di solito per le generazioni viventi. Senza questo tag e senza citazioni, il controllo avvisa su persone, famiglie, eventi, relazioni e legami genitore-figlio senza fonti.
+- `tags: [decesso_ignoto]` (persona): la persona è nata oltre 115 anni fa ma l'atto di morte non è ancora noto. Senza questo tag o un evento di decesso/sepoltura, il validatore segnala una violazione della presunzione biologica di decesso.
 - `transcribed_by` e `verified_on_original` (citazione): chi ha trascritto l'atto (`user`, `assistant`, `user_and_assistant`, `other`) e se una persona ha riletto la trascrizione sull'immagine originale.
 
 Non usare `conoscenza_diretta` per un antenato. Per un antenato collega la citazione dell'atto che lo nomina, anche in `child_citation_ids`.

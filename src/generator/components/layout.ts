@@ -9,6 +9,7 @@ export interface LayoutOptions {
   activeNav?: 'home' | 'tree' | 'surnames' | 'places' | 'sources' | 'timeline' | 'search' | 'next-steps';
   content: string;
   headExtra?: string;
+  jsonLd?: object | object[];
   /** Serie della pagina: classe serie-N sul body (usata da chi vuole il colore della serie). */
   serie?: Serie;
   /** Pagine larghe (albero): il foglio occupa tutta la larghezza disponibile. */
@@ -84,6 +85,7 @@ export function renderLayout(options: LayoutOptions): string {
     description: options.description,
     rootRelPath: root,
     headExtra: options.headExtra,
+    jsonLd: options.jsonLd,
     bodyContent,
     bodyClass: `${serieCls}${options.wide ? ' larga' : ''}`,
   });

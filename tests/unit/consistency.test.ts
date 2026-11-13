@@ -25,9 +25,9 @@ function event(id: string, type: string, personId: string, year: number, precisi
 
 /** Famiglia base: padre 1850, madre 1855, figlio 1880. Ogni test la rompe in un punto. */
 function baseFamily() {
-  person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\n');
-  person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\n');
-  person('KID', 'sex: male\nbirth_event_id: E_KID_B\n');
+  person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [decesso_ignoto]\n');
+  person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [decesso_ignoto]\n');
+  person('KID', 'sex: male\nbirth_event_id: E_KID_B\ntags: [decesso_ignoto]\n');
   event('E_DAD_B', 'birth', 'DAD', 1850);
   event('E_MOM_B', 'birth', 'MOM', 1855);
   event('E_KID_B', 'birth', 'KID', 1880);
@@ -139,7 +139,7 @@ describe('Avvisi di coerenza', () => {
   it('persona, famiglia ed evento senza fonti, salvo citazione o tag conoscenza_diretta', () => {
     baseFamily();
     write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
-    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\n');
+    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\npage_or_folio: "p. 1"\n');
     let msgs = messages();
     expect(msgs).toContainEqual(expect.stringMatching(/Persona senza fonti/));
     expect(msgs).toContainEqual(expect.stringMatching(/Famiglia senza fonti/));
@@ -147,16 +147,16 @@ describe('Avvisi di coerenza', () => {
     // Il figlio e il suo evento hanno una citazione: niente avviso per loro.
     expect(loadAndValidateDataset(dir).warnings.filter((w) => w.filePath.includes('KID'))).toEqual([]);
     // Genitori noti per conoscenza diretta: niente avvisi né per loro, né per gli eventi, né per la famiglia.
-    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [conoscenza_diretta]\n');
-    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [conoscenza_diretta]\n');
+    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [conoscenza_diretta, decesso_ignoto]\n');
+    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [conoscenza_diretta, decesso_ignoto]\n');
     expect(messages()).toEqual([]);
   });
 
   it('child_citation_ids conta come fonte per il figlio e la famiglia', () => {
     baseFamily();
     write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
-    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: marriage\nperson_id: DAD\nevent_id: E_DAD_B\n');
-    write('sources/citations/C2.yml', 'id: C2\nsource_id: SRC1\nclaim_type: marriage\nperson_id: MOM\nevent_id: E_MOM_B\n');
+    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: marriage\nperson_id: DAD\nevent_id: E_DAD_B\npage_or_folio: "p. 1"\n');
+    write('sources/citations/C2.yml', 'id: C2\nsource_id: SRC1\nclaim_type: marriage\nperson_id: MOM\nevent_id: E_MOM_B\npage_or_folio: "p. 2"\n');
     write('events/E_KID_B.yml', 'id: E_KID_B\nevent_type: birth\nperson_ids: [KID]\nsource_citation_ids: [C1]\ndate:\n  precision: year_only\n  year: 1880\n');
     write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID]\nchild_citation_ids:\n  KID: [C1]\n');
     expect(messages()).toEqual([]);
@@ -165,9 +165,9 @@ describe('Avvisi di coerenza', () => {
   it('legame genitore-figlio e relazione esplicita senza fonti', () => {
     baseFamily();
     write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
-    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: DAD\nevent_id: E_DAD_B\nfamily_id: F1\n');
-    write('sources/citations/C2.yml', 'id: C2\nsource_id: SRC1\nclaim_type: birth\nperson_id: MOM\nevent_id: E_MOM_B\n');
-    write('sources/citations/C3.yml', 'id: C3\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\n');
+    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: DAD\nevent_id: E_DAD_B\nfamily_id: F1\npage_or_folio: "p. 1"\n');
+    write('sources/citations/C2.yml', 'id: C2\nsource_id: SRC1\nclaim_type: birth\nperson_id: MOM\nevent_id: E_MOM_B\npage_or_folio: "p. 2"\n');
+    write('sources/citations/C3.yml', 'id: C3\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\npage_or_folio: "p. 3"\n');
     // KID e F1 hanno fonti, ma nessuna citazione collega KID a F1: avviso sul legame (ora bloccante in --strict)
     expect(messages()).toContainEqual(expect.stringMatching(/Legame genitore-figlio senza fonti per KID/));
     expect(runValidateCommand({ dataDir: dir, silent: true, strict: true })).toBe(1);
@@ -315,6 +315,97 @@ describe('parents_next_step', () => {
     fs.writeFileSync(cfg, 'tree: [non, valido\n');
     expect(runValidateCommand({ dataDir: dir, configPath: cfg, silent: true })).toBe(1);
     expect(runValidateCommand({ dataDir: dir, configPath: path.join(baseDir, 'manca.yml'), silent: true })).toBe(1);
+  });
+});
+
+describe('Nuovi controlli di qualità e coerenza genealogica', () => {
+  it('battesimo antecedente alla nascita', () => {
+    baseFamily();
+    write('events/E_KID_BAPT.yml', 'id: E_KID_BAPT\nevent_type: baptism\nperson_ids: [KID]\ndate:\n  precision: exact\n  year: 1879\n  month: 5\n  day: 1\n');
+    write('events/E_KID_B.yml', 'id: E_KID_B\nevent_type: birth\nperson_ids: [KID]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/Battesimo antecedente alla nascita/));
+  });
+
+  it('eventi vitali attivi dopo la morte', () => {
+    baseFamily();
+    person('KID', 'sex: male\nbirth_event_id: E_KID_B\ndeath_event_id: E_KID_D\n');
+    event('E_KID_D', 'death', 'KID', 1900);
+    event('E_KID_RES', 'residence', 'KID', 1910);
+    expect(messages()).toContainEqual(expect.stringMatching(/si svolge dopo la morte/));
+  });
+
+  it('eventi vitali prima della nascita', () => {
+    baseFamily();
+    event('E_KID_MIL', 'military_service', 'KID', 1870);
+    expect(messages()).toContainEqual(expect.stringMatching(/si svolge prima della nascita/));
+  });
+
+  it('inversione fine e inizio unione', () => {
+    baseFamily();
+    write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID]\nstart_event_id: E_MAR\nend_event_id: E_DIV\n');
+    write('events/E_MAR.yml', 'id: E_MAR\nevent_type: marriage\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1875\n');
+    write('events/E_DIV.yml', 'id: E_DIV\nevent_type: divorce\nfamily_id: F1\ndate:\n  precision: year_only\n  year: 1870\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/fine unione.*precedente.*inizio/));
+  });
+
+  it('intervallo intergenesico anomalo tra figli della stessa madre', () => {
+    baseFamily();
+    person('KID2', 'sex: female\nbirth_event_id: E_KID2_B\ntags: [decesso_ignoto]\n');
+    write('events/E_KID_B.yml', 'id: E_KID_B\nevent_type: birth\nperson_ids: [KID]\ndate:\n  precision: exact\n  year: 1880\n  month: 1\n  day: 1\n');
+    write('events/E_KID2_B.yml', 'id: E_KID2_B\nevent_type: birth\nperson_ids: [KID2]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
+    write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID, KID2]\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/Intervallo intergenesico anomalo/));
+  });
+
+  it('gemelli nati lo stesso giorno: nessun avviso di intervallo anomalo', () => {
+    baseFamily();
+    person('KID2', 'sex: female\nbirth_event_id: E_KID2_B\ntags: [decesso_ignoto]\n');
+    write('events/E_KID_B.yml', 'id: E_KID_B\nevent_type: birth\nperson_ids: [KID]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
+    write('events/E_KID2_B.yml', 'id: E_KID2_B\nevent_type: birth\nperson_ids: [KID2]\ndate:\n  precision: exact\n  year: 1880\n  month: 5\n  day: 1\n');
+    write('families/F1.yml', 'id: F1\npartner_ids: [DAD, MOM]\nchildren_ids: [KID, KID2]\n');
+    expect(messages().filter((m) => m.includes('Intervallo intergenesico'))).toEqual([]);
+  });
+
+  it('paternità in età avanzata tra 65 e 75 anni', () => {
+    baseFamily();
+    event('E_DAD_B', 'birth', 'DAD', 1810); // padre 70enne alla nascita di KID nel 1880
+    expect(messages()).toContainEqual(expect.stringMatching(/paternità in età avanzata/));
+  });
+
+  it('persona centenaria marcata living-person restricted genera errore bloccante', () => {
+    baseFamily();
+    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\nprivacy: living-person restricted\n');
+    event('E_DAD_B', 'birth', 'DAD', 1850);
+    const res = loadAndValidateDataset(dir);
+    expect(res.warnings).toContainEqual(expect.objectContaining({
+      message: expect.stringMatching(/non può essere considerata vivente/),
+    }));
+  });
+
+  it('citazione guscio vuoto priva di coordinate minime', () => {
+    baseFamily();
+    write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
+    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/Citazione 'C1' priva di coordinate minime/));
+  });
+
+  it('disallineamento persona-evento nella citazione genera errore bloccante', () => {
+    baseFamily();
+    write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
+    // Citazione riferisce DAD ma evento E_KID_B elenca solo KID
+    write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: DAD\nevent_id: E_KID_B\npage_or_folio: "p. 1"\n');
+    const res = loadAndValidateDataset(dir);
+    expect(res.valid).toBe(false);
+    expect(res.errors[0].message).toMatch(/non include questa persona nei suoi person_ids/);
+  });
+
+  it('ciclo nella gerarchia dei luoghi genera errore bloccante', () => {
+    baseFamily();
+    write('places/PLC1.yml', 'id: PLC1\nname: Luogo 1\nparent_place_id: PLC2\n');
+    write('places/PLC2.yml', 'id: PLC2\nname: Luogo 2\nparent_place_id: PLC1\n');
+    const res = loadAndValidateDataset(dir);
+    expect(res.valid).toBe(false);
+    expect(res.errors[0].message).toMatch(/Ciclo rilevato nella gerarchia dei luoghi/);
   });
 });
 

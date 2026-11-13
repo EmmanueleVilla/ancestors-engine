@@ -37,7 +37,7 @@ describe('Sources & Citations Integration', () => {
 
     // 3. Person profile shows citation card
     const personHtml = fs.readFileSync(path.join(testOutDir, 'people', 'P003.html'), 'utf-8');
-    expect(personHtml).toContain('href="../sources/SRC001.html"');
+    expect(personHtml).toMatch(/href="\.\.\/sources\/SRC001\.html(#cit-CIT001)?"/);
     expect(personHtml).toContain('folio 12');
     expect(personHtml).toContain('Thomas son of William and Mary Doe');
   });

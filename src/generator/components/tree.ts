@@ -151,6 +151,7 @@ export interface TreeCanvasEdge {
   spouse2Name?: string;
   marriageDate?: string;
   marriagePlace?: string;
+  marriagePlaceUrl?: string;
   sourceId?: string;
   sourceTitle?: string;
   sourceUrl?: string;
@@ -341,6 +342,7 @@ export function extractTreeGraphData(
 
           let marriageDate: string | undefined;
           let marriagePlace: string | undefined;
+          let marriagePlaceUrl: string | undefined;
           let sourceId: string | undefined;
           let sourceTitle: string | undefined;
           let sourceUrl: string | undefined;
@@ -369,7 +371,10 @@ export function extractTreeGraphData(
               }
               if (startEvt.place_id) {
                 const plc = dataset.places.get(startEvt.place_id);
-                if (plc) marriagePlace = plc.name;
+                if (plc) {
+                  marriagePlace = plc.name;
+                  marriagePlaceUrl = `${rootRelPath}places/${startEvt.place_id}.html`;
+                }
               }
               if (startEvt.notes) {
                 notes.push(...startEvt.notes);
@@ -421,6 +426,7 @@ export function extractTreeGraphData(
             spouse2Name,
             marriageDate,
             marriagePlace,
+            marriagePlaceUrl,
             sourceId,
             sourceTitle,
             sourceUrl,

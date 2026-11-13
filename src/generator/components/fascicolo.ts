@@ -3,6 +3,19 @@ import { Person, getPersonDisplayName } from '../../model/person.js';
 import { NormalizedDataset } from '../../validator/index.js';
 import { Serie, fascicolo, serieOf } from './serie.js';
 import { getSiteSettings } from '../site.js';
+import type { DateValue } from '../../model/date.js';
+
+export function computeAgeAtEvent(birthDate?: DateValue | null, eventDate?: DateValue | null): string {
+  if (!birthDate?.year || !eventDate?.year) return '';
+  let age = eventDate.year - birthDate.year;
+  if (birthDate.month && eventDate.month) {
+    if (eventDate.month < birthDate.month || (eventDate.month === birthDate.month && eventDate.day && birthDate.day && eventDate.day < birthDate.day)) {
+      age--;
+    }
+  }
+  if (age < 0) return '';
+  return `a ${age} anni`;
+}
 
 export function isLiving(p: Person | undefined): boolean {
   return p?.privacy === 'living-person restricted';

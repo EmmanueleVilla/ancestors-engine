@@ -15,18 +15,44 @@ export function renderPlacePage(
     .filter((e) => e.place_id === place.id)
     .sort((a, b) => (a.date?.year || 0) - (b.date?.year || 0));
 
-  const peopleIds = new Set<string>();
-  for (const e of events) (e.person_ids || []).forEach((id) => peopleIds.add(id));
+  const bornHere = new Set<string>();
+  const diedHere = new Set<string>();
+  const marriedHere = new Set<string>();
+  const otherHere = new Set<string>();
+
+  for (const e of events) {
+    for (const pid of e.person_ids || []) {
+      const p = dataset.people.get(pid);
+      if (p?.birth_event_id === e.id || e.event_type === 'birth' || e.event_type === 'baptism') {
+        bornHere.add(pid);
+      } else if (p?.death_event_id === e.id || p?.burial_event_id === e.id || e.event_type === 'death' || e.event_type === 'burial') {
+        diedHere.add(pid);
+      } else if (e.event_type === 'marriage' || e.event_type === 'civil_union') {
+        marriedHere.add(pid);
+      } else {
+        otherHere.add(pid);
+      }
+    }
+  }
+
+  const allPeopleCount = new Set([...bornHere, ...diedHere, ...marriedHere, ...otherHere]).size;
 
   const parent = place.parent_place_id ? dataset.places.get(place.parent_place_id) : undefined;
   const area = [place.administrative_area, place.country].filter(Boolean).join(', ');
+
+  const geoBox = typeof place.latitude === 'number' && typeof place.longitude === 'number'
+    ? `<div class="coordinate-box" style="margin-top:0.6rem;font-size:0.9em;color:#555">
+         <span>Lat. ${place.latitude.toFixed(4)}, Lon. ${place.longitude.toFixed(4)}</span> ·
+         <a href="https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=14/${place.latitude}/${place.longitude}" target="_blank" rel="noopener">Visualizza su OpenStreetMap</a>
+       </div>`
+    : '';
 
   const registro = events.length
     ? `<ol class="registro">${events
         .map((e) => {
           const who = (e.person_ids || []).map((id) => personLink(id, dataset, rootRelPath, false)).join(', ');
           return `
-          <li>
+          <li id="evt-${escapeHtml(e.id)}">
             <div class="registro-data">${escapeHtml(dataIt(formatDate(e.date)) || 's.d.')}<span class="tipo">${escapeHtml(eventLabel(e.event_type))}</span></div>
             <div class="registro-corpo">
               ${who ? `<div class="registro-titolo">${who}</div>` : ''}
@@ -38,18 +64,32 @@ export function renderPlacePage(
     : '<p class="muto">Nessun evento registrato in questo luogo.</p>';
 
   const content = `
+  <nav class="breadcrumb" aria-label="Percorso">
+    <ol>
+      <li><a href="${rootRelPath}index.html">Archivio</a></li>
+      <li><a href="${rootRelPath}places/index.html">Luoghi</a></li>
+      ${parent ? `<li><a href="${rootRelPath}places/${parent.id}.html">${escapeHtml(parent.name)}</a></li>` : ''}
+      <li aria-current="page">${escapeHtml(place.name)}</li>
+    </ol>
+  </nav>
+
   <header class="intestazione">
     <div>
       <h1 class="page-title">${escapeHtml(place.name)}</h1>
       ${place.place_type ? `<p class="sottotitolo">${escapeHtml(placeTypeLabel(place.place_type).replace(/^./, (c) => c.toUpperCase()))}</p>` : ''}
       ${place.historical_name ? `<p class="sottotitolo">un tempo ${escapeHtml(place.historical_name)}</p>` : ''}
       ${parent ? `<p class="sottotitolo">in <a href="${rootRelPath}places/${parent.id}.html">${escapeHtml(parent.name)}</a></p>` : area ? `<p class="sottotitolo">${escapeHtml(area)}</p>` : ''}
+      ${geoBox}
     </div>
   </header>
 
   <section class="sezione">
-    <h2>Persone <span class="dattilo muto">${peopleIds.size}</span></h2>
-    ${peopleIds.size ? `<ul class="nomi">${[...peopleIds].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : '<p class="muto">Nessuna persona collegata a questo luogo.</p>'}
+    <h2>Persone <span class="dattilo muto">${allPeopleCount}</span></h2>
+    ${bornHere.size ? `<div class="sottosezione-muto">Nati a ${escapeHtml(place.name)}:</div><ul class="nomi" style="margin-bottom:1rem">${[...bornHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    ${diedHere.size ? `<div class="sottosezione-muto">Deceduti o sepolti a ${escapeHtml(place.name)}:</div><ul class="nomi" style="margin-bottom:1rem">${[...diedHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    ${marriedHere.size ? `<div class="sottosezione-muto">Uniti in matrimonio a ${escapeHtml(place.name)}:</div><ul class="nomi" style="margin-bottom:1rem">${[...marriedHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    ${otherHere.size ? `<div class="sottosezione-muto">Altri collegamenti:</div><ul class="nomi">${[...otherHere].map((id) => `<li>${personLink(id, dataset, rootRelPath)}</li>`).join('')}</ul>` : ''}
+    {!allPeopleCount ? '<p class="muto">Nessuna persona collegata a questo luogo.</p>' : ''}
   </section>
 
   <section class="sezione">
@@ -58,11 +98,27 @@ export function renderPlacePage(
   </section>
   `;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Place',
+    name: place.name,
+    ...(typeof place.latitude === 'number' && typeof place.longitude === 'number'
+      ? {
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: place.latitude,
+            longitude: place.longitude,
+          },
+        }
+      : {}),
+  };
+
   return renderLayout({
     title: place.name,
     description: `Persone ed eventi a ${place.name}`,
     rootRelPath,
     activeNav: 'places',
+    jsonLd,
     content,
   });
 }

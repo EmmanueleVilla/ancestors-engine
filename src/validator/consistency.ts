@@ -1,6 +1,7 @@
 import type { DateValue } from '../model/date.js';
 import type { DatasetIndex, ValidationError } from './reference.js';
 import { buildParentsOf, directAncestorsOf, isParentRelationship, missingParents, type LineageRelationship } from './lineage.js';
+import type { ResearchEntry } from '../model/research.js';
 
 /**
  * Controlli di coerenza "morbidi": non bloccano la build (salvo `--strict`),
@@ -68,7 +69,19 @@ const EXPECTED_EVENT_TYPES: Record<string, string[]> = {
   death_event_id: ['death'],
   burial_event_id: ['burial'],
   start_event_id: ['marriage', 'civil_union', 'partnership'],
+  end_event_id: ['divorce', 'annulment', 'separation'],
 };
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 /** Riferimenti dal registro ricerche: contano come "usati" anche se nessuna scheda li richiama. */
 export interface ExtraReferences {
@@ -78,6 +91,8 @@ export interface ExtraReferences {
   relationships?: LineageRelationship[];
   /** Radice dell'albero (`tree.root_id`): attiva i controlli sugli antenati diretti. */
   rootId?: string;
+  /** Voci del registro ricerche per controlli di coerenza esiti. */
+  researchEntries?: ResearchEntry[];
 }
 
 /** Persona vivente riservata: il sito non ne mostra i dettagli. */
@@ -85,6 +100,9 @@ const LIVING_RESTRICTED = 'living-person restricted';
 
 /** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
 const DETACHED_TAG = 'scollegato';
+
+/** Tag che dichiara una persona deceduta di cui non si possiede ancora l'atto di morte (spegne l'avviso >115 anni). */
+export const UNKNOWN_DEATH_TAG = 'decesso_ignoto';
 
 /**
  * Tag che dichiara la fonte di una persona: la conoscenza diretta del ricercatore o della famiglia
@@ -114,6 +132,14 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     }
   };
 
+  const eventsByPerson = new Map<string, string[]>();
+  for (const [eid, { data: evt }] of index.events) {
+    for (const pid of evt.person_ids ?? []) {
+      if (!eventsByPerson.has(pid)) eventsByPerson.set(pid, []);
+      eventsByPerson.get(pid)!.push(eid);
+    }
+  }
+
   // ---- Persone ----
   for (const [pid, { data: p, filePath }] of index.people) {
     for (const field of ['birth_event_id', 'death_event_id', 'burial_event_id'] as const) {
@@ -133,6 +159,79 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     if (surelyAfter(death, burial)) warn(filePath, 'burial_event_id', `Sepoltura precedente alla morte.`);
     if (birth && death && death.min - birth.max > MAX_LIFESPAN) {
       warn(filePath, 'death_event_id', `Vita di oltre ${MAX_LIFESPAN} anni: controllare le date.`);
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (!p.death_event_id && !p.burial_event_id && birth && currentYear - birth.max > 115 && !p.tags?.includes(UNKNOWN_DEATH_TAG)) {
+      warn(filePath, 'birth_event_id', `Persona nata oltre 115 anni fa (${nameOf(pid)}) senza evento di morte o sepoltura: verificare presunzione di decesso o aggiungere tag ${UNKNOWN_DEATH_TAG}.`);
+    }
+
+    if (p.privacy === LIVING_RESTRICTED) {
+      if (p.death_event_id || p.burial_event_id) {
+        warn(filePath, 'privacy', `Persona con evento di morte/sepoltura (${nameOf(pid)}) ma marcata '${LIVING_RESTRICTED}'.`);
+      }
+      if (birth && currentYear - birth.min > 110) {
+        warn(filePath, 'privacy', `Persona nata oltre 110 anni fa (${nameOf(pid)}) marcata '${LIVING_RESTRICTED}': non può essere considerata vivente.`);
+      }
+    }
+
+    const personEventIds = eventsByPerson.get(pid) ?? [];
+
+    // Battesimo antecedente alla nascita
+    for (const eid of personEventIds) {
+      const evt = index.events.get(eid)?.data;
+      if (evt && (evt.event_type === 'baptism' || evt.event_type === 'christening')) {
+        const bapDate = eventDate(eid);
+        if (surelyAfter(birth, bapDate)) {
+          warn(filePath, 'birth_event_id', `Battesimo antecedente alla nascita per ${nameOf(pid)}.`);
+        }
+      }
+    }
+
+    // Eventi vitali attivi post-mortem o prima della nascita
+    for (const eid of personEventIds) {
+      const evt = index.events.get(eid)?.data;
+      if (!evt) continue;
+      const ed = eventDate(eid);
+      if (death && evt.event_type !== 'death' && evt.event_type !== 'burial' && evt.event_type !== 'probate') {
+        if (surelyAfter(ed, death)) {
+          warn(filePath, 'death_event_id', `L'evento '${eid}' di tipo '${evt.event_type}' si svolge dopo la morte di ${nameOf(pid)}.`);
+        }
+      }
+      if (birth && evt.event_type !== 'birth' && evt.event_type !== 'baptism' && evt.event_type !== 'christening') {
+        if (surelyAfter(birth, ed)) {
+          warn(filePath, 'birth_event_id', `L'evento '${eid}' di tipo '${evt.event_type}' si svolge prima della nascita di ${nameOf(pid)}.`);
+        }
+      }
+    }
+
+    // Spostamento a velocità impossibile prima del 1920
+    const datedGeoEvents: { id: string; date: Bounds; lat: number; lon: number; placeName: string }[] = [];
+    for (const eid of personEventIds) {
+      const evt = index.events.get(eid)?.data;
+      const d = eventDate(eid);
+      if (!evt || !d || d.max >= 1920 || d.max - d.min > 3 / 365 || !evt.place_id) continue;
+      const plc = index.places.get(evt.place_id)?.data;
+      if (plc && typeof plc.latitude === 'number' && typeof plc.longitude === 'number') {
+        datedGeoEvents.push({ id: eid, date: d, lat: plc.latitude, lon: plc.longitude, placeName: plc.name });
+      }
+    }
+    datedGeoEvents.sort((a, b) => a.date.min - b.date.min);
+    for (let i = 0; i < datedGeoEvents.length - 1; i++) {
+      const e1 = datedGeoEvents[i];
+      const e2 = datedGeoEvents[i + 1];
+      const yearsDiff = e2.date.min - e1.date.max;
+      const hours = Math.max(1, yearsDiff * 365.25 * 24);
+      if (hours <= 72) {
+        const dist = haversineKm(e1.lat, e1.lon, e2.lat, e2.lon);
+        if (dist > 100 && dist / hours > 50) {
+          warn(
+            filePath,
+            'id',
+            `Spostamento apparentemente impossibile per ${nameOf(pid)} tra '${e1.id}' (${e1.placeName}) e '${e2.id}' (${e2.placeName}): ${Math.round(dist)} km in circa ${Math.round(hours)} ore (velocità ${Math.round(dist / hours)} km/h prima del 1920): verificare possibile omonimia.`
+          );
+        }
+      }
     }
   }
 
@@ -155,6 +254,7 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
   for (const [, { data: fam, filePath }] of index.families) {
     const partners: string[] = fam.partner_ids ?? [];
     checkEventType(filePath, 'start_event_id', fam.start_event_id);
+    checkEventType(filePath, 'end_event_id', fam.end_event_id);
 
     if (partners.length === 2) {
       const [a, b] = partners.map((id) => index.people.get(id)?.data?.sex);
@@ -164,6 +264,11 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     }
 
     const union = eventDate(fam.start_event_id);
+    const endUnion = eventDate(fam.end_event_id);
+    if (union && endUnion && surelyAfter(union, endUnion)) {
+      warn(filePath, 'end_event_id', `L'evento di fine unione '${fam.end_event_id}' è precedente all'evento di inizio '${fam.start_event_id}'.`);
+    }
+
     for (const partner of partners) {
       if (union && surelyAfter(birthOf(partner), union, -PARENT_MIN_AGE)) {
         warn(filePath, 'start_event_id', `${nameOf(partner)} si sposa prima dei ${PARENT_MIN_AGE} anni (o prima di nascere).`);
@@ -187,11 +292,80 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
         const maxAge = sex === 'female' ? MOTHER_MAX_AGE : FATHER_MAX_AGE;
         if (parentBirth && childBirth.min - parentBirth.max > maxAge) {
           warn(filePath, 'children_ids', `${who}: genitore con più di ${maxAge} anni alla nascita del figlio.`);
+        } else if (sex === 'male' && parentBirth && childBirth.min - parentBirth.max > 65) {
+          warn(filePath, 'children_ids', `${who}: paternità in età avanzata (tra 65 e 75 anni, a circa ${Math.round(childBirth.min - parentBirth.max)} anni): verificare possibile omonimia.`);
         }
         const gap = sex === 'female' ? 0 : POSTHUMOUS_GAP;
         if (surelyAfter(childBirth, parentDeath, gap)) {
           warn(filePath, 'children_ids', `${who}: figlio nato dopo la morte del genitore.`);
         }
+      }
+    }
+  }
+
+  // Intervallo intergenesico minimo tra figli della stessa madre
+  const childrenByMother = new Map<string, { childId: string; famFile: string; birth: Bounds }[]>();
+  for (const [, { data: fam, filePath: famFilePath }] of index.families) {
+    const mothers = (fam.partner_ids ?? []).filter((id: string) => index.people.get(id)?.data?.sex === 'female');
+    for (const mId of mothers) {
+      if (!childrenByMother.has(mId)) childrenByMother.set(mId, []);
+      for (const childId of fam.children_ids ?? []) {
+        const b = birthOf(childId);
+        if (b && b.max - b.min <= 1) {
+          childrenByMother.get(mId)!.push({ childId, famFile: famFilePath, birth: b });
+        }
+      }
+    }
+  }
+  for (const [mId, kids] of childrenByMother) {
+    kids.sort((a, b) => a.birth.min - b.birth.min);
+    for (let i = 0; i < kids.length - 1; i++) {
+      const k1 = kids[i];
+      const k2 = kids[i + 1];
+      const gap = k2.birth.min - k1.birth.max;
+      if (gap > 3 / 365 && k2.birth.max - k1.birth.min < 0.70) {
+        warn(
+          k2.famFile,
+          'children_ids',
+          `Intervallo intergenesico anomalo tra ${nameOf(k1.childId)} e ${nameOf(k2.childId)} (stessa madre ${nameOf(mId)}): nati a distanza di meno di 8.5 mesi senza essere gemelli.`
+        );
+      }
+    }
+  }
+
+  // Bigamia o unioni sovrapposte non documentate
+  const familiesByPartner = new Map<string, { famId: string; filePath: string; start: Bounds | null; end: Bounds | null; spouseId?: string }[]>();
+  for (const [fid, { data: fam, filePath: famFilePath }] of index.families) {
+    const partners = fam.partner_ids ?? [];
+    if (partners.length === 2) {
+      for (let i = 0; i < 2; i++) {
+        const p = partners[i];
+        const spouse = partners[1 - i];
+        if (!familiesByPartner.has(p)) familiesByPartner.set(p, []);
+        familiesByPartner.get(p)!.push({
+          famId: fid,
+          filePath: famFilePath,
+          start: eventDate(fam.start_event_id),
+          end: eventDate(fam.end_event_id),
+          spouseId: spouse,
+        });
+      }
+    }
+  }
+  for (const [pId, famList] of familiesByPartner) {
+    if (famList.length < 2) continue;
+    const sorted = famList.filter((f) => f.start !== null).sort((a, b) => a.start!.min - b.start!.min);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const f1 = sorted[i];
+      const f2 = sorted[i + 1];
+      const spouse1Death = f1.spouseId ? deathOf(f1.spouseId) : null;
+      const f1StillActive = (!spouse1Death || surelyAfter(spouse1Death, f2.start)) && (!f1.end || surelyAfter(f1.end, f2.start));
+      if (f1StillActive && surelyAfter(f2.start, f1.start)) {
+        warn(
+          f2.filePath,
+          'start_event_id',
+          `Possibile unione sovrapposta o bigamia per ${nameOf(pId)} tra la famiglia '${f1.famId}' e '${f2.famId}'.`
+        );
       }
     }
   }
@@ -384,6 +558,9 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
     }
   }
   for (const [cid, { data: cit, filePath }] of index.citations) {
+    if (!cit.page_or_folio && !cit.quoted_text && (!cit.notes || cit.notes.length === 0)) {
+      warn(filePath, 'id', `Citazione '${cid}' priva di coordinate minime (mancano page_or_folio, quoted_text e note).`);
+    }
     if (!referencedCitations.has(cid) && !cit.person_id && !cit.event_id && !cit.family_id && !cit.relationship_id) {
       warn(filePath, 'id', `Citazione non collegata a nessun record.`);
     }
@@ -394,6 +571,21 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
   for (const [mid, { data: med, filePath }] of index.media) {
     if (!referencedMedia.has(mid) && !med.person_ids?.length && !med.event_ids?.length && !med.source_id) {
       warn(filePath, 'id', `Media non collegato a nessun record.`);
+    }
+  }
+
+  for (const entry of extra.researchEntries ?? []) {
+    if (entry.outcome === 'found' && entry.references?.length) {
+      const anyRefFound = entry.references.some((refId) =>
+        index.people.has(refId) || index.families.has(refId) || index.events.has(refId) || index.sources.has(refId)
+      );
+      if (!anyRefFound) {
+        warn(
+          'data/research',
+          'outcome',
+          `Ricerca con esito 'found' (${entry.goal}) per ${entry.references.join(', ')} ma nessun dato associato risulta registrato nel dataset.`
+        );
+      }
     }
   }
 

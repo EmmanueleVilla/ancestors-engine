@@ -1240,7 +1240,11 @@ function initFamilyTree() {
         badges += `<span class="modal-meta">${escapeHtml(edge.marriageDate)}</span>`;
       }
       if (edge.marriagePlace) {
-        badges += `<span class="modal-meta">${escapeHtml(edge.marriagePlace)}</span>`;
+        if (edge.marriagePlaceUrl) {
+          badges += `<a href="${edge.marriagePlaceUrl}" class="modal-meta modal-meta-link">${escapeHtml(edge.marriagePlace)}</a>`;
+        } else {
+          badges += `<span class="modal-meta">${escapeHtml(edge.marriagePlace)}</span>`;
+        }
       }
       metaEl.innerHTML = badges;
     }

@@ -30,6 +30,7 @@ export interface DocumentOptions {
   description?: string;
   rootRelPath?: string;
   headExtra?: string;
+  jsonLd?: object | object[];
   bodyContent: string;
   bodyClass?: string;
 }
@@ -38,6 +39,9 @@ export function renderDocument(options: DocumentOptions): string {
   const root = options.rootRelPath ?? './';
   const site = getSiteSettings();
   const desc = options.description || site.description;
+  const jsonLdScript = options.jsonLd
+    ? `\n  <script type="application/ld+json">\n${JSON.stringify(options.jsonLd, null, 2)}\n  </script>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="it">
@@ -52,7 +56,7 @@ export function renderDocument(options: DocumentOptions): string {
   <link rel="stylesheet" href="${root}assets/css/print.css" media="print">
   <script defer src="${root}assets/js/main.js"></script>
   ${seriesColorsStyle()}
-  ${options.headExtra || ''}
+  ${options.headExtra || ''}${jsonLdScript}
 </head>
 <body${options.bodyClass ? ` class="${escapeHtml(options.bodyClass)}"` : ''}>
   ${options.bodyContent}

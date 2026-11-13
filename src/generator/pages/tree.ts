@@ -1,7 +1,7 @@
 import { escapeHtml } from '../components/base.js';
 import { renderLayout } from '../components/layout.js';
 import { Person, getPersonDisplayName } from '../../model/person.js';
-import { extractTreeGraphData } from '../components/tree.js';
+import { extractTreeGraphData, buildAncestorBranch, buildDescendantBranch } from '../components/tree.js';
 import { NormalizedDataset } from '../../validator/index.js';
 import { allSeries, serieOf } from '../components/serie.js';
 
@@ -133,6 +133,20 @@ export function renderTreePage(
     </div>
     </details>
   </section>
+
+  <details class="albero-accessibile no-print">
+    <summary>Visualizzazione testuale accessibile (antenati e discendenti)</summary>
+    <div class="albero-accessibile-contenuto">
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Antenati</h3>
+        ${buildAncestorBranch(person.id, dataset, 0, 4, rootRelPath)}
+      </div>
+      <div>
+        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Discendenti</h3>
+        ${buildDescendantBranch(person.id, dataset, 0, 3, rootRelPath)}
+      </div>
+    </div>
+  </details>
 
   <script id="tree-data" type="application/json">
     ${graphJson}
