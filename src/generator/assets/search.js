@@ -1,4 +1,4 @@
-// Client-side search progressive enhancement
+// Client-side search progressive enhancement con tolleranza a varianti storiche e prefissi
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('search-input');
   const resultsList = document.getElementById('search-results');
@@ -11,13 +11,53 @@ document.addEventListener('DOMContentLoaded', () => {
   let searchIndex = null;
   let isLoading = false;
 
+  function normalizeText(str) {
+    if (str === undefined || str === null) return '';
+    return String(str)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/['’`]/g, '')
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function compactText(str) {
+    return normalizeText(str).replace(/\s+/g, '');
+  }
+
+  function phoneticVariant(str) {
+    return compactText(str)
+      .replace(/ou/g, 'o')
+      .replace(/([a-z])\1+/g, '$1');
+  }
+
+  function prepareRecord(item) {
+    const parts = [
+      item.display_name,
+      item.given_names,
+      item.surname,
+      item.maiden_name,
+      ...(item.alternative_names || []),
+      ...(item.places || []),
+      item.birth_year ? String(item.birth_year) : '',
+      item.death_year ? String(item.death_year) : '',
+    ];
+    item._norm = parts.map(normalizeText).filter(Boolean).join(' ');
+    item._compact = parts.map(compactText).filter(Boolean).join('');
+    item._phonetic = parts.map(phoneticVariant).filter(Boolean).join('');
+    return item;
+  }
+
   const loadIndex = async () => {
     if (searchIndex || isLoading) return;
     isLoading = true;
     try {
       const resp = await fetch('search-index.json');
       if (resp.ok) {
-        searchIndex = await resp.json();
+        const raw = await resp.json();
+        searchIndex = raw.map(prepareRecord);
         if (status) status.textContent = `${searchIndex.length} fascicoli consultabili.`;
       }
     } catch (err) {
@@ -33,21 +73,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!searchIndex) {
       await loadIndex();
     }
-    const q = input.value.trim().toLowerCase();
-    if (!q || !searchIndex) {
+    const qRaw = input.value.trim();
+    const qNorm = normalizeText(qRaw);
+    if (!qNorm || !searchIndex) {
+      resultsCard.style.display = 'none';
+      resultsList.innerHTML = '';
+      return;
+    }
+
+    const tokens = qNorm.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) {
       resultsCard.style.display = 'none';
       resultsList.innerHTML = '';
       return;
     }
 
     const matches = searchIndex.filter((item) => {
-      if (item.display_name.toLowerCase().includes(q)) return true;
-      if (item.maiden_name && item.maiden_name.toLowerCase().includes(q)) return true;
-      if (item.alternative_names && item.alternative_names.some((alt) => alt.toLowerCase().includes(q))) return true;
-      if (item.birth_year && String(item.birth_year).includes(q)) return true;
-      if (item.death_year && String(item.death_year).includes(q)) return true;
-      if (item.places && item.places.some((pl) => pl.toLowerCase().includes(q))) return true;
-      return false;
+      for (const token of tokens) {
+        const compactTok = token.replace(/\s+/g, '');
+        const phoneticTok = phoneticVariant(token);
+
+        // 1. Match testuale diretto
+        if (item._norm && item._norm.includes(token)) continue;
+
+        // 2. Match compatto (es. 'decapitani' con 'de capitani' o 'de\' capitani')
+        if (compactTok && item._compact && item._compact.includes(compactTok)) continue;
+
+        // 3. Match fonetico/storico per token di almeno 3 caratteri (evita falsi positivi)
+        if (phoneticTok.length >= 3 && item._phonetic && item._phonetic.includes(phoneticTok)) continue;
+
+        return false;
+      }
+      return true;
     });
 
     resultsCount.textContent = matches.length;

@@ -67,3 +67,5 @@ export function compileSearchIndex(dataset: NormalizedDataset): SearchIndexRecor
 
   return records;
 }
+
+export * from './matcher.js';
