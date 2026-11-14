@@ -30,7 +30,7 @@ describe('Example archive', () => {
     expect(people.some((f) => f.startsWith('P001'))).toBe(false);
     expect(people.filter((f) => f.startsWith('L-')).length).toBe(4);
     expect(fs.readFileSync(path.join(outDir, 'index.html'), 'utf-8')).toContain('Archivio della famiglia Rossi');
-    expect(fs.existsSync(path.join(outDir, 'next-steps.html'))).toBe(false);
+    expect(fs.existsSync(path.join(outDir, 'next-steps.html'))).toBe(true);
     // Dataset scaricabile, con lo stesso filtro delle pagine
     expect(fs.readFileSync(path.join(outDir, 'index.html'), 'utf-8')).toContain('href="./dati.html"');
     expect(fs.existsSync(path.join(outDir, 'dati.html'))).toBe(true);

@@ -437,7 +437,8 @@ function initFamilyTree() {
     // Nome
     c.fillStyle = PAL.ink;
     c.font = `${direct ? 600 : 500} 15px ${F_TITLE}`;
-    c.fillText(truncate(c, node.name, cardW - (isFocus ? 52 : 22)), pos.x + 11, pos.y + 30);
+    const nameRightPad = isFocus ? 52 : (node.ancestorDegree ? 36 : 22);
+    c.fillText(truncate(c, node.name, cardW - nameRightPad), pos.x + 11, pos.y + 30);
 
     if (isFocus) {
       c.save();
@@ -453,6 +454,14 @@ function initFamilyTree() {
       c.textAlign = 'center';
       c.textBaseline = 'middle';
       c.fillText('TU', 0, 0.5);
+      c.restore();
+    } else if (node.ancestorDegree) {
+      c.save();
+      c.font = `600 11px ${F_TYPE}`;
+      c.fillStyle = direct ? PAL.ink : PAL.graphite;
+      c.textAlign = 'right';
+      c.textBaseline = 'alphabetic';
+      c.fillText(node.ancestorDegree, pos.x + cardW - 10, pos.y + 28);
       c.restore();
     }
 

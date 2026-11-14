@@ -124,6 +124,8 @@ export interface TreeCanvasNode {
   isFocus: boolean;
   /** Linea principale: la radice configurata, i suoi antenati diretti e i suoi discendenti. */
   isDirectLine?: boolean;
+  /** Grado di antecedenza rispetto al focus (I nonni, II bisnonni, III trisavoli, ecc.). */
+  ancestorDegree?: string;
   /** Serie dell'archivio (1-4, 0 = fondo generale): colore della fascia in testa alla scheda. */
   serie?: number;
   /** Tipi di documento in cui compare il nome: icone in basso a destra nella scheda. */
@@ -310,6 +312,34 @@ function collectChildEvidence(
     evidence: evidence.length > 0 ? evidence : undefined,
     media: media.length > 0 ? media : undefined,
   };
+}
+
+export function toRoman(num: number): string {
+  if (num <= 0) return '';
+  const romanLookup: [number, string][] = [
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+  let res = '';
+  let n = num;
+  for (const [val, sym] of romanLookup) {
+    while (n >= val) {
+      res += sym;
+      n -= val;
+    }
+  }
+  return res;
 }
 
 export function extractTreeGraphData(
@@ -551,6 +581,26 @@ export function extractTreeGraphData(
       .map((r) => (r.person_id === personId ? r.related_person_id : r.person_id))
   );
 
+  // Grado di antecedenza rispetto al focus (distanza generazionale lungo la linea degli antenati diretti)
+  const parentsOf = buildParentsOf(dataset.families.values(), dataset.relationships);
+  const ancestorDistances = new Map<string, number>();
+  if (personId && dataset.people.has(personId)) {
+    const queue: { id: string; dist: number }[] = [];
+    for (const parentId of parentsOf.get(personId) || []) {
+      ancestorDistances.set(parentId, 1);
+      queue.push({ id: parentId, dist: 1 });
+    }
+    while (queue.length > 0) {
+      const { id, dist } = queue.shift()!;
+      for (const parentId of parentsOf.get(id) || []) {
+        if (!ancestorDistances.has(parentId)) {
+          ancestorDistances.set(parentId, dist + 1);
+          queue.push({ id: parentId, dist: dist + 1 });
+        }
+      }
+    }
+  }
+
   // Include every person connected to the focus person
   for (const p of dataset.people.values()) {
     if (!component.has(p.id)) continue;
@@ -615,6 +665,9 @@ export function extractTreeGraphData(
 
     const foundIn = isLiving ? undefined : foundInKinds(p.id, dataset);
 
+    const ancDist = ancestorDistances.get(p.id);
+    const ancestorDegree = ancDist && ancDist >= 2 ? toRoman(ancDist - 1) : undefined;
+
     const node: TreeCanvasNode = {
       foundIn,
       serie: Math.min(serieOf(p.id, dataset).index, 8),
@@ -629,6 +682,7 @@ export function extractTreeGraphData(
       dateText,
       isLiving,
       isFocus: p.id === personId,
+      ancestorDegree,
       generation: genMap.get(p.id) ?? 0,
       role,
       url: `${rootRelPath}people/${p.id}.html`,

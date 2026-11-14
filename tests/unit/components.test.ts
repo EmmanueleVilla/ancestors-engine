@@ -3,7 +3,7 @@ import { PersonSchema } from '../../src/model/person.js';
 import { FamilySchema } from '../../src/model/family.js';
 import { RelationshipSchema } from '../../src/model/relationship.js';
 import { NormalizedDataset } from '../../src/validator/index.js';
-import { renderTreeNode, buildAncestorBranch } from '../../src/generator/components/tree.js';
+import { renderTreeNode, buildAncestorBranch, extractTreeGraphData, toRoman } from '../../src/generator/components/tree.js';
 import { renderPersonPage } from '../../src/generator/pages/person.js';
 import { renderTreePage } from '../../src/generator/pages/tree.js';
 import { renderDocument, safeJsonLd } from '../../src/generator/components/base.js';
@@ -110,5 +110,57 @@ describe('Tree and Person Components', () => {
     expect(html).not.toContain('Attestazione:');
     expect(html).not.toContain('2005');
     expect(html).not.toContain('PLC_SECRET');
+  });
+
+  it('converts numbers to roman numerals correctly', () => {
+    expect(toRoman(1)).toBe('I');
+    expect(toRoman(2)).toBe('II');
+    expect(toRoman(3)).toBe('III');
+    expect(toRoman(4)).toBe('IV');
+    expect(toRoman(5)).toBe('V');
+    expect(toRoman(9)).toBe('IX');
+    expect(toRoman(10)).toBe('X');
+    expect(toRoman(0)).toBe('');
+  });
+
+  it('assigns ancestorDegree to direct ancestors starting with I for grandparents', () => {
+    // P4 (great-grandparent) -> P1 (grandparent) -> P3 (parent) -> P5 (focus child)
+    const p4 = PersonSchema.parse({ id: 'P4', given_names: 'GreatGrandpa', surname: 'Doe' });
+    const p5 = PersonSchema.parse({ id: 'P5', given_names: 'FocusChild', surname: 'Doe' });
+
+    const multiGenDataset: NormalizedDataset = {
+      ...dataset,
+      people: new Map([
+        ['P1', p1],
+        ['P2', p2],
+        ['P3', p3],
+        ['P4', p4],
+        ['P5', p5],
+      ]),
+      families: new Map([
+        ['F0', FamilySchema.parse({ id: 'F0', partner_ids: ['P4'], children_ids: ['P1'] })],
+        ['F1', FamilySchema.parse({ id: 'F1', partner_ids: ['P1', 'P2'], children_ids: ['P3'] })],
+        ['F2', FamilySchema.parse({ id: 'F2', partner_ids: ['P3'], children_ids: ['P5'] })],
+      ]),
+      relationships: [
+        RelationshipSchema.parse({ id: 'r0', person_id: 'P4', related_person_id: 'P1', relationship_type: 'biological_parent' }),
+        RelationshipSchema.parse({ id: 'r1', person_id: 'P1', related_person_id: 'P3', relationship_type: 'biological_parent' }),
+        RelationshipSchema.parse({ id: 'r2', person_id: 'P2', related_person_id: 'P3', relationship_type: 'biological_parent' }),
+        RelationshipSchema.parse({ id: 'r3', person_id: 'P3', related_person_id: 'P5', relationship_type: 'biological_parent' }),
+      ],
+    };
+
+    const graph = extractTreeGraphData('P5', multiGenDataset, '../');
+    const nodes = new Map(graph.nodes.map((n) => [n.id, n]));
+
+    // Focus child
+    expect(nodes.get('P5')?.ancestorDegree).toBeUndefined();
+    // Parent (P3): distance 1 -> no roman numeral
+    expect(nodes.get('P3')?.ancestorDegree).toBeUndefined();
+    // Grandparents (P1, P2): distance 2 -> I
+    expect(nodes.get('P1')?.ancestorDegree).toBe('I');
+    expect(nodes.get('P2')?.ancestorDegree).toBe('I');
+    // Great-grandparent (P4): distance 3 -> II
+    expect(nodes.get('P4')?.ancestorDegree).toBe('II');
   });
 });

@@ -24,7 +24,7 @@ export interface GenerateOptions {
   outDir: string;
   profile?: 'public' | 'private';
   assetsDir?: string;
-  /** Markdown of NEXT_STEPS.md; rendered as next-steps.html (private profile only). */
+  /** Markdown of NEXT_STEPS.md; rendered as next-steps.html. */
   nextStepsMarkdown?: string;
   /** Layout dell'albero dalla configurazione dell'archivio (ID già pseudonimizzati nel profilo pubblico). */
   treeLayout?: TreeLayout;
@@ -66,7 +66,7 @@ export function generateStaticSite(dataset: NormalizedDataset, options: Generate
     }
   }
 
-  const nextStepsMarkdown = options.profile === 'private' ? options.nextStepsMarkdown : undefined;
+  const nextStepsMarkdown = options.nextStepsMarkdown;
   setNextStepsNav(!!nextStepsMarkdown);
   const nextStepsFile = path.join(outDir, 'next-steps.html');
   if (nextStepsMarkdown) {
