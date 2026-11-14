@@ -114,7 +114,7 @@ In your archive's `package.json`:
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "dependencies": {
-    "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.4.1"
+    "ancestors-engine": "github:EmmanueleVilla/ancestors-engine#v1.4.2"
   }
 }
 ```
