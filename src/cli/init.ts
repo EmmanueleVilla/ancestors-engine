@@ -168,7 +168,7 @@ Viene visualizzato solo nel profilo privato del sito statico.
             prepare: 'git config core.hooksPath .githooks 2>/dev/null || true',
           },
           dependencies: {
-            'ancestors-engine': 'github:EmmanueleVilla/ancestors-engine#v1.4.0',
+            'ancestors-engine': 'github:EmmanueleVilla/ancestors-engine#v1.4.1',
           },
         },
         null,
