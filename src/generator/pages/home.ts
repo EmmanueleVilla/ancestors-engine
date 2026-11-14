@@ -41,14 +41,15 @@ export function renderHomePage(dataset: NormalizedDataset, rootRelPath: string =
     const ys = ids.map((id) => birthYear(id, dataset)).filter((y): y is number => !!y);
     const span = !ys.length ? '' : Math.min(...ys) === Math.max(...ys) ? `${ys[0]}` : `${Math.min(...ys)}–${Math.max(...ys)}`;
     const heads = serieHeads(s, dataset);
-    const coppia = heads.map((id) => escapeHtml(nameOf(dataset.people.get(id), id))).join(' e ');
-    const target = heads[0] ? `${rootRelPath}trees/${heads[0]}.html` : '#';
+    const headId = heads.find((id) => dataset.people.get(id)?.surname === s.name) || heads[0];
+    const capostipite = headId ? escapeHtml(nameOf(dataset.people.get(headId), headId)) : '';
+    const target = headId ? `${rootRelPath}trees/${headId}.html` : '#';
     return `
-      <a class="dorso ${s.cls}" href="${target}" aria-label="Serie ${s.roman}, ${escapeHtml(s.name)}: apri l'albero di ${coppia}">
+      <a class="dorso ${s.cls}" href="${target}" aria-label="Serie ${s.roman}, ${escapeHtml(s.name)}: apri l'albero di ${capostipite}">
         <span class="dorso-etichetta"><span class="serie-num">${s.roman}</span>${ids.length} fasc.</span>
         <span class="dorso-foro" aria-hidden="true"></span>
         <span class="dorso-cognome">${escapeHtml(s.name)}</span>
-        <span class="dorso-piede"><span class="coppia">${coppia}</span>${span ? `<span class="anni-serie"><span class="nati">nati </span>${span}</span>` : ''}</span>
+        <span class="dorso-piede"><span class="coppia">${capostipite}</span>${span ? `<span class="anni-serie"><span class="nati">nati </span>${span}</span>` : ''}</span>
       </a>`;
   };
 
