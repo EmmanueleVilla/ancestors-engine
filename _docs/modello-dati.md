@@ -52,13 +52,13 @@ Lo schema conserva una sola conclusione per evento. Le asserzioni in conflitto r
 
 - `parents_next_step` (persona): cosa serve per trovare i genitori. L'albero lo mostra sulla scheda "?", la scheda persona quando ha meno di due genitori. Con `tree.root_id` configurato, il controllo avvisa se un antenato diretto della radice (o del coniuge con cui ha figli) non ha padre o madre e non ha questo campo. Avvisa anche se il campo c'è ma il sito non lo mostra: genitori già collegati o persona riservata.
 - `unrecorded_children` (famiglia): figli che sappiamo esistere ma che non inseriamo come persone.
-- `tags: [scollegato]` (persona): la persona è volutamente fuori dall'albero, perché nessun atto prova il legame. Senza questo tag, il controllo avvisa se la persona non è in nessuna famiglia.
-- `tags: [conoscenza_diretta]` (persona): la fonte è la conoscenza diretta della famiglia, di solito per le generazioni viventi. Senza questo tag e senza citazioni, il controllo avvisa su persone, famiglie, eventi, relazioni e legami genitore-figlio senza fonti.
+- `tags: [detached]` (persona): la persona è volutamente fuori dall'albero, perché nessun atto prova il legame. Senza questo tag, il controllo avvisa se la persona non è in nessuna famiglia.
+- `tags: [direct_knowledge]` (persona): la fonte è la conoscenza diretta della famiglia, di solito per le generazioni viventi. Senza questo tag e senza citazioni, il controllo avvisa su persone, famiglie, eventi, relazioni e legami genitore-figlio senza fonti.
 - `transcribed_by` e `verified_on_original` (citazione): chi ha trascritto l'atto (`user`, `assistant`, `user_and_assistant`, `other`) e se una persona ha riletto la trascrizione sull'immagine originale.
 
-Non usare `conoscenza_diretta` per un antenato. Per un antenato collega la citazione dell'atto che lo nomina, anche in `child_citation_ids`.
+Non usare `direct_knowledge` per un antenato. Per un antenato collega la citazione dell'atto che lo nomina, anche in `child_citation_ids`.
 
-**Attenzione:** i tag `conoscenza_diretta` e `scollegato` spengono alcuni controlli. Controlla ogni loro uso nel diff, anche quando li scrive un agente.
+**Attenzione:** i tag `direct_knowledge` e `detached` spengono alcuni controlli. Controlla ogni loro uso nel diff, anche quando li scrive un agente.
 
 ## Dopo ogni modifica
 

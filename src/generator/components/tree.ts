@@ -523,7 +523,7 @@ export function extractTreeGraphData(
   }
 
   // Only people connected (through any chain of kinship) to the focus person belong in this tree.
-  // Unconnected clusters (e.g. people tagged 'scollegato') get their own tree page instead.
+  // Unconnected clusters (e.g. people tagged 'detached') get their own tree page instead.
   const component = new Set<string>();
   const startId = dataset.people.has(personId) ? personId : Array.from(dataset.people.keys())[0];
   if (startId) {

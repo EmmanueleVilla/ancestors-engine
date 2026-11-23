@@ -162,9 +162,9 @@ Running `ancestors validate` (or `npm run check`) performs a comprehensive multi
 - **Partner sex check**: heuristic warning if both partners have the same recorded sex, prompting review for transcription or typing typos.
 
 ### 6. Evidence & Citation Hygiene (`consistency.ts`) — [WARNING / ERROR in `--strict`]
-- **Mandatory source coverage**: every person, family, event, and relationship must be supported by at least one citation (`source_citation_ids`), or by the explicit tag `conoscenza_diretta` (permitted for living/recent generations).
+- **Mandatory source coverage**: every person, family, event, and relationship must be supported by at least one citation (`source_citation_ids`), or by the explicit tag `direct_knowledge` (permitted for living/recent generations).
 - **Individual parent–child links**: warns if a specific filiation link in `children_ids` lacks a corroborating citation (in `child_citation_ids` or citations with `claim_type: parentage`).
-- **Detached persons**: warns if an individual is not connected to any family, unless explicitly tagged with `scollegato` (used for individuals mentioned in records whose exact family link is yet to be established).
+- **Detached persons**: warns if an individual is not connected to any family, unless explicitly tagged with `detached` (used for individuals mentioned in records whose exact family link is yet to be established).
 - **Orphan records without consumers**:
   - Events not linked to any person or family.
   - Citations not linked to any person, event, family, or relationship.

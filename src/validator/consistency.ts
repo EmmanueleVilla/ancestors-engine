@@ -96,7 +96,7 @@ export interface ExtraReferences {
 const LIVING_RESTRICTED = 'living-person restricted';
 
 /** Tag che dichiara una persona volutamente fuori dall'albero (trovata negli atti, legame non provato). */
-const DETACHED_TAG = 'scollegato';
+const DETACHED_TAG = 'detached';
 
 const POSTHUMOUS_EVENT_TYPES = new Set([
   'death',
@@ -108,7 +108,13 @@ const POSTHUMOUS_EVENT_TYPES = new Set([
  * Tag che dichiara la fonte di una persona: la conoscenza diretta del ricercatore o della famiglia
  * (di solito le generazioni viventi). Sostituisce la citazione nel controllo "senza fonti".
  */
-export const DIRECT_KNOWLEDGE_TAG = 'conoscenza_diretta';
+export const DIRECT_KNOWLEDGE_TAG = 'direct_knowledge';
+
+/** Nomi italiani dei tag usati fino alla v1.4.4: il controllo chiede di sostituirli. */
+const LEGACY_TAGS: Record<string, string> = {
+  scollegato: DETACHED_TAG,
+  conoscenza_diretta: DIRECT_KNOWLEDGE_TAG,
+};
 
 export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {}): ValidationError[] {
   const warnings: ValidationError[] = [];
@@ -457,9 +463,13 @@ export function checkConsistency(index: DatasetIndex, extra: ExtraReferences = {
 
   for (const [pid, { data: p, filePath }] of index.people) {
     if (!inFamily.has(pid) && !p.tags?.includes(DETACHED_TAG)) warn(filePath, 'id', `Persona non collegata a nessuna famiglia.`);
+    for (const tag of p.tags ?? []) {
+      const replacement = LEGACY_TAGS[tag];
+      if (replacement) warn(filePath, 'tags', `Tag obsoleto ${tag}: sostituiscilo con ${replacement}.`);
+    }
   }
 
-  // Ogni persona, famiglia, evento e relazione ha una fonte: una citazione, oppure il tag conoscenza_diretta.
+  // Ogni persona, famiglia, evento e relazione ha una fonte: una citazione, oppure il tag direct_knowledge.
   // Il controllo vale solo se il dataset usa le citazioni (un dataset di prova senza citazioni non lo attiva).
   if (index.citations.size > 0) {
     const citedPeople = new Set<string>();

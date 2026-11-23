@@ -128,15 +128,23 @@ describe('Avvisi di coerenza', () => {
     expect(messages()).toContainEqual(expect.stringMatching(/Entrambi i partner/));
   });
 
-  it('persona fuori da ogni famiglia, salvo tag scollegato', () => {
+  it('persona fuori da ogni famiglia, salvo tag detached', () => {
     baseFamily();
     person('LONE');
     expect(messages()).toContainEqual(expect.stringMatching(/non collegata a nessuna famiglia/));
-    person('LONE', 'tags: [scollegato]\n');
+    person('LONE', 'tags: [detached]\n');
     expect(messages()).toEqual([]);
   });
 
-  it('persona, famiglia ed evento senza fonti, salvo citazione o tag conoscenza_diretta', () => {
+  it('tag italiani obsoleti: avviso con il nome nuovo', () => {
+    baseFamily();
+    person('LONE', 'tags: [scollegato]\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/Tag obsoleto scollegato: sostituiscilo con detached/));
+    person('LONE', 'tags: [detached, conoscenza_diretta]\n');
+    expect(messages()).toContainEqual(expect.stringMatching(/Tag obsoleto conoscenza_diretta: sostituiscilo con direct_knowledge/));
+  });
+
+  it('persona, famiglia ed evento senza fonti, salvo citazione o tag direct_knowledge', () => {
     baseFamily();
     write('sources/SRC1.yml', 'id: SRC1\ntitle: Registro\nsource_type: civil_registry\n');
     write('sources/citations/C1.yml', 'id: C1\nsource_id: SRC1\nclaim_type: birth\nperson_id: KID\nevent_id: E_KID_B\npage_or_folio: "p. 1"\n');
@@ -147,8 +155,8 @@ describe('Avvisi di coerenza', () => {
     // Il figlio e il suo evento hanno una citazione: niente avviso per loro.
     expect(loadAndValidateDataset(dir).warnings.filter((w) => w.filePath.includes('KID'))).toEqual([]);
     // Genitori noti per conoscenza diretta: niente avvisi né per loro, né per gli eventi, né per la famiglia.
-    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [conoscenza_diretta]\n');
-    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [conoscenza_diretta]\n');
+    person('DAD', 'sex: male\nbirth_event_id: E_DAD_B\ntags: [direct_knowledge]\n');
+    person('MOM', 'sex: female\nbirth_event_id: E_MOM_B\ntags: [direct_knowledge]\n');
     expect(messages()).toEqual([]);
   });
 

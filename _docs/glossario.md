@@ -27,6 +27,6 @@ Usa queste parole sempre con questo significato.
 | Ricerca pianificata | Una ricerca decisa ma non ancora fatta (esito `planned`) |
 | Paradato | Un dato sul processo: chi ha cercato o trascritto, come, con quali grafie e strumenti |
 | Lettura mirata | Lettura di una sola parte delle pagine, per esempio le strisce con i nomi |
-| Conoscenza diretta | Fonte di una persona nota alla famiglia senza un atto (tag `conoscenza_diretta`) |
+| Conoscenza diretta | Fonte di una persona nota alla famiglia senza un atto (tag `direct_knowledge`) |
 | Pseudonimo | Il codice `L-…` che sostituisce l'ID di una persona viva nel sito pubblico |
 | Fuga | Un nome o un ID di una persona viva rimasto nel sito pubblico |
